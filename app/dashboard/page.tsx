@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 // import { useTheme } from '../components/ThemeProvider' // Theme logic is bypassed for forced dark mode
+import Link from 'next/link'
 import Calendar from '../components/Calendar'
 import TaskSection from '../components/TaskSection'
 import Loader from '../components/Loader'
@@ -87,11 +88,11 @@ export default function DashboardPage() {
             {/* Logo / Title Block */}
             <div className="flex items-center gap-4 group cursor-pointer">
               <div className="w-10 h-10 bg-[#CCFF00] clip-corner-4 flex items-center justify-center text-black font-black font-tech text-xl">
-                XO
+                WT
               </div>
               <div className="flex flex-col">
-                <h1 className="text-2xl font-black tracking-tighter leading-none glitch-text" data-text="XOTC // TRACKER">
-                  XOTC // TRACKER
+                <h1 className="text-2xl font-black tracking-tighter leading-none glitch-text" data-text="WORKTRACE // SYSTEM">
+                  WORKTRACE // SYSTEM
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="w-2 h-2 bg-[#CCFF00] rounded-full animate-pulse"></span>
@@ -109,9 +110,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="h-full flex items-center gap-2">
+              <Link href="/dashboard/stats">
+                <button className="btn-cyber font-mono text-xs flex items-center gap-2 mr-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <span>DATA_VISUALIZATION</span>
+                </button>
+              </Link>
+
               <button
                 onClick={handleLogout}
-                className="btn-cyber font-mono text-xs flex items-center gap-2"
+                className="btn-cyber font-mono text-xs flex items-center gap-2 text-red-500 border-red-500 hover:bg-red-500 hover:text-black"
               >
                 <span>TERMINATE_SESSION</span>
               </button>
@@ -207,4 +217,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-
