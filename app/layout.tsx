@@ -23,7 +23,7 @@ const rajdhani = Rajdhani({
 });
 
 export const metadata: Metadata = {
-  title: "WORKTRACE // OS",
+  title: "WORKTRACE ",
   description: "Advanced Operational Dashboard",
   icons: {
     icon: '/logo.png',

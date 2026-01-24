@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import ContributionGraph from '@/app/components/ContributionGraph'
+import { startOfMonth, endOfMonth, isWithinInterval, startOfYear, endOfYear } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,9 +16,18 @@ interface WorkUpdate {
     is_leave: boolean
 }
 
+interface Holiday {
+    date: string
+    localName: string
+    name: string
+    countryCode: string
+}
+
 export default function StatsPage() {
     const [workUpdates, setWorkUpdates] = useState<WorkUpdate[]>([])
+    const [holidays, setHolidays] = useState<Holiday[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('yearly')
     const router = useRouter()
 
     useEffect(() => {
@@ -25,21 +36,73 @@ export default function StatsPage() {
             router.push('/login')
             return
         }
-        loadMonthData()
+        loadStatsData()
+        fetchHolidays()
     }, [router])
 
-    const loadMonthData = async () => {
+    const fetchHolidays = async () => {
+        // Fallback holiday data for India 2026
+        const fallbackHolidays: Holiday[] = [
+            { date: '2026-01-01', localName: 'New Year Day', name: "New Year's Day", countryCode: 'IN' },
+            { date: '2026-01-15', localName: 'Pongal', name: 'Pongal', countryCode: 'IN' },
+            { date: '2026-01-16', localName: 'Thiruvalluvar Day', name: 'Thiruvalluvar Day', countryCode: 'IN' },
+            { date: '2026-01-17', localName: 'Uzhavar Thirunal', name: 'Uzhavar Thirunal', countryCode: 'IN' },
+            { date: '2026-01-26', localName: 'Republic Day', name: 'Republic Day', countryCode: 'IN' },
+            { date: '2026-02-01', localName: 'Thai Poosam', name: 'Thai Poosam', countryCode: 'IN' },
+            { date: '2026-03-19', localName: 'Telugu New Year', name: 'Telugu New Year', countryCode: 'IN' },
+            { date: '2026-03-21', localName: 'Ramzan', name: 'Ramzan (Id-ul-Fitr)', countryCode: 'IN' },
+            { date: '2026-03-31', localName: 'Mahavir Jayanti', name: 'Mahavir Jayanti', countryCode: 'IN' },
+            { date: '2026-04-14', localName: 'Tamil New Year / Ambedkar Jayanti', name: 'Tamil New Year / Dr. Ambedkar Birthday', countryCode: 'IN' },
+            { date: '2026-05-01', localName: 'May Day', name: 'May Day', countryCode: 'IN' },
+            { date: '2026-05-28', localName: 'Bakrid', name: 'Bakrid (Id-ul-Zuha)', countryCode: 'IN' },
+            { date: '2026-06-26', localName: 'Muharram', name: 'Muharram', countryCode: 'IN' },
+            { date: '2026-08-15', localName: 'Independence Day', name: 'Independence Day', countryCode: 'IN' },
+            { date: '2026-08-26', localName: 'Milad-un-Nabi', name: 'Milad-un-Nabi', countryCode: 'IN' },
+            { date: '2026-09-04', localName: 'Krishna Jayanthi', name: 'Krishna Jayanthi', countryCode: 'IN' },
+            { date: '2026-09-14', localName: 'Vinayakar Chathurthi', name: 'Vinayakar Chathurthi', countryCode: 'IN' },
+            { date: '2026-10-02', localName: 'Gandhi Jayanti', name: 'Gandhi Jayanti', countryCode: 'IN' },
+            { date: '2026-10-19', localName: 'Ayutha Pooja', name: 'Ayutha Pooja', countryCode: 'IN' },
+            { date: '2026-10-20', localName: 'Vijaya Dasami', name: 'Vijaya Dasami', countryCode: 'IN' },
+            { date: '2026-11-08', localName: 'Deepavali', name: 'Deepavali', countryCode: 'IN' },
+            { date: '2026-12-25', localName: 'Christmas', name: 'Christmas', countryCode: 'IN' },
+        ];
+
+        try {
+            const year = new Date().getFullYear()
+            const response = await fetch(`https://date.nager.at/Api/v3/PublicHolidays/${year}/IN`)
+
+            if (response.ok && response.status !== 204) {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json()
+                    const today = new Date().toISOString().split('T')[0]
+                    const upcoming = data.filter((h: Holiday) => h.date >= today).slice(0, 5)
+                    setHolidays(upcoming.length > 0 ? upcoming : fallbackHolidays.filter(h => h.date >= today).slice(0, 5))
+                    return;
+                }
+            }
+            // If API fails or returns no content, use fallback
+            const today = new Date().toISOString().split('T')[0]
+            setHolidays(fallbackHolidays.filter(h => h.date >= today).slice(0, 5))
+        } catch (error) {
+            console.error('Error fetching holidays, using fallback:', error)
+            const today = new Date().toISOString().split('T')[0]
+            setHolidays(fallbackHolidays.filter(h => h.date >= today).slice(0, 5))
+        }
+    }
+
+    const loadStatsData = async () => {
         try {
             setIsLoading(true)
             const now = new Date()
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+            const startStr = startOfYear(now).toISOString()
+            const endStr = endOfYear(now).toISOString()
 
             const { data, error } = await supabase
                 .from('work_updates')
                 .select('*')
-                .gte('date', startOfMonth)
-                .lte('date', endOfMonth)
+                .gte('date', startStr)
+                .lte('date', endStr)
 
             if (error) throw error
             setWorkUpdates(data || [])
@@ -50,45 +113,23 @@ export default function StatsPage() {
         }
     }
 
-    // Graph Data Calculation
-    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
-    const graphData = Array.from({ length: daysInMonth }, (_, i) => {
-        const day = i + 1
-        // Find update for this day
-        const update = workUpdates.find(u => new Date(u.date).getDate() === day)
+    // Calculations based on current view
+    const now = new Date()
+    const filteredUpdates = viewMode === 'monthly'
+        ? workUpdates.filter(u => isWithinInterval(new Date(u.date), { start: startOfMonth(now), end: endOfMonth(now) }))
+        : workUpdates
 
-        // Value mapping: 100 (Work), 50 (Leave), 0 (No Entry)
-        let value = 0
-        let status = 'NONE'
-        if (update) {
-            if (update.is_leave) {
-                value = 50
-                status = 'LEAVE'
-            } else {
-                value = 100
-                status = 'WORK'
-            }
-        }
-        return { day, value, status }
-    })
-
-    // SVG Geometry
-    const width = 800
-    const height = 300
-    const padding = 40
-
-    // Create points string for polyline
-    const points = graphData.map((d, i) => {
-        const x = padding + (i / (daysInMonth - 1)) * (width - 2 * padding)
-        const y = height - padding - (d.value / 100) * (height - 2 * padding)
-        return `${x},${y}`
-    }).join(' ')
-
-    // Calculations for Cards
-    const totalEntries = workUpdates.length
-    const leaveDays = workUpdates.filter(u => u.is_leave).length
+    const totalEntries = filteredUpdates.length
+    const leaveDays = filteredUpdates.filter(u => u.is_leave).length
     const workingDays = totalEntries - leaveDays
-    const currentMonthName = new Date().toLocaleString('default', { month: 'long' }).toUpperCase()
+
+    const currentViewLabel = viewMode === 'monthly'
+        ? now.toLocaleString('default', { month: 'long' }).toUpperCase()
+        : now.getFullYear().toString()
+
+    const daysInView = viewMode === 'monthly'
+        ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+        : 365 // Simplified
 
     if (isLoading) {
         return (
@@ -106,18 +147,31 @@ export default function StatsPage() {
 
             {/* HUD Header */}
             <header className="bg-[#050505]/90 border-b border-[#1F1F1F] px-6 h-20 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="btn-cyber-filled px-4 py-2 flex items-center gap-2 text-xs text-[#050505]">
-                        <span className="text-lg">«</span>
-                        <span>RETURN_DASHBOARD</span>
+                <div className="flex items-center gap-6">
+                    <Link href="/dashboard" className="flex items-center gap-3 group">
+                        <img src="/logo_laptop.png" alt="WT Logo" className="w-10 h-10 object-contain rounded-lg" />
+                        <span className="text-xs font-mono text-gray-500 group-hover:text-[#CCFF00] transition-colors">DASHBOARD_RETURN</span>
                     </Link>
-                    <h1 className="text-xl font-bold font-tech tracking-widest text-white/50">
-                        TARGET_CONSOLE // <span className="text-[#CCFF00]">{currentMonthName}</span>
+                    <div className="h-8 w-[1px] bg-[#1F1F1F]"></div>
+                    <h1 className="text-xl font-bold font-tech tracking-widest text-white/50 uppercase">
+                        TARGET_CONSOLE // CHENNAI_GOVT_SYNC // <span className="text-[#CCFF00]">{currentViewLabel}</span>
                     </h1>
                 </div>
                 <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
-                    <div className="hidden md:block animate-pulse text-[#CCFF00]">● LIVE_FEED</div>
-                    <div>ID: USER_01 // SECURE</div>
+                    <div className="flex bg-[#111] p-1 rounded-sm border border-[#333]">
+                        <button
+                            onClick={() => setViewMode('monthly')}
+                            className={`px-3 py-1 rounded-sm transition-all ${viewMode === 'monthly' ? 'bg-[#CCFF00] text-black' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            MONTHLY
+                        </button>
+                        <button
+                            onClick={() => setViewMode('yearly')}
+                            className={`px-3 py-1 rounded-sm transition-all ${viewMode === 'yearly' ? 'bg-[#CCFF00] text-black' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            YEARLY
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -126,10 +180,10 @@ export default function StatsPage() {
                 {/* Main Graph Console */}
                 <div className="w-full panel-base p-1 clip-corner-2 relative bg-[#080808] border border-[#333]">
                     {/* Console Header */}
-                    <div className="bg-[#0F0F0F] border-b border-[#1F1F1F] p-2 flex justify-between items-center px-4">
+                    <div className="bg-[#0F0F0F] border-b border-[#1F1F1F] p-4 flex justify-between items-center px-4">
                         <div className="flex items-center gap-2">
                             <svg className="w-4 h-4 text-[#CCFF00]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                            <span className="text-[#CCFF00] font-mono text-xs tracking-widest">ACTIVITY_SIGNAL_TRACE</span>
+                            <span className="text-[#CCFF00] font-mono text-xs tracking-widest">ACTIVITY_CONTRIBUTION_HEATMAP</span>
                         </div>
                         <div className="flex gap-1">
                             <div className="w-2 h-2 bg-[#1F1F1F] border border-gray-700"></div>
@@ -139,76 +193,11 @@ export default function StatsPage() {
                     </div>
 
                     {/* Graph Container */}
-                    <div className="relative w-full h-[300px] md:h-[400px] bg-[#050505] overflow-hidden p-4">
-                        {/* Grid Overlay */}
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
-
-                        <svg className="w-full h-full" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-                            {/* X/Y Axes */}
-                            <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#333" strokeWidth="1" />
-                            <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="#333" strokeWidth="1" />
-
-                            {/* Grid Lines H */}
-                            <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="#1F1F1F" strokeWidth="1" strokeDasharray="4 4" />
-                            <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#1F1F1F" strokeWidth="1" strokeDasharray="4 4" />
-
-                            {/* X-axis Labels */}
-                            {graphData.map((d, i) => {
-                                // Show label every 5 days or for first/last day
-                                if (d.day === 1 || d.day === daysInMonth || d.day % 5 === 0) {
-                                    const x = padding + (i / (daysInMonth - 1)) * (width - 2 * padding)
-                                    return (
-                                        <g key={`label-${i}`}>
-                                            <line x1={x} y1={height - padding} x2={x} y2={height - padding + 5} stroke="#333" strokeWidth="1" />
-                                            <text
-                                                x={x}
-                                                y={height - padding + 20}
-                                                textAnchor="middle"
-                                                className="fill-gray-600 font-mono text-[10px]"
-                                            >
-                                                {d.day.toString().padStart(2, '0')}
-                                            </text>
-                                        </g>
-                                    )
-                                }
-                                return null
-                            })}
-
-                            {/* The Signal Line */}
-                            <polyline
-                                points={points}
-                                fill="none"
-                                stroke="#CCFF00"
-                                strokeWidth="2"
-                                strokeLinejoin="round"
-                                className="drop-shadow-[0_0_8px_rgba(204,255,0,0.6)]"
-                            />
-
-                            {/* Data Points */}
-                            {graphData.map((d, i) => {
-                                const x = padding + (i / (daysInMonth - 1)) * (width - 2 * padding)
-                                const y = height - padding - (d.value / 100) * (height - 2 * padding)
-                                return (
-                                    <g key={i}>
-                                        <circle cx={x} cy={y} r="3" fill="#050505" stroke={d.status === 'WORK' ? '#CCFF00' : d.status === 'LEAVE' ? '#EF4444' : '#333'} strokeWidth="2" />
-                                        {/* Target Indicator for selected/latest */}
-                                        {i === daysInMonth - 1 && (
-                                            <g className="animate-pulse">
-                                                <circle cx={x} cy={y} r="8" fill="none" stroke="#CCFF00" strokeWidth="1" opacity="0.5" />
-                                                <line x1={x} y1={padding} x2={x} y2={height - padding} stroke="#CCFF00" strokeWidth="1" strokeDasharray="2 2" opacity="0.3" />
-                                            </g>
-                                        )}
-                                    </g>
-                                )
-                            })}
-                        </svg>
-
-                        {/* Labels */}
-                        <div className="absolute left-2 top-[35px] text-[10px] font-mono text-gray-500">100 // WORK</div>
-                        <div className="absolute left-2 top-[50%] -translate-y-1/2 text-[10px] font-mono text-gray-500">50 // LEAVE</div>
-                        <div className="absolute left-2 bottom-[35px] text-[10px] font-mono text-gray-500">00 // VOID</div>
-
-                        <div className="absolute bottom-1 right-4 text-[10px] font-mono text-[#CCFF00]">T-MINUS: {daysInMonth} DAYS</div>
+                    <div className="relative w-full bg-[#050505] p-2 md:p-6">
+                        <ContributionGraph
+                            data={workUpdates}
+                            mode={viewMode}
+                        />
                     </div>
                 </div>
 
@@ -220,10 +209,10 @@ export default function StatsPage() {
                         <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <svg className="w-24 h-24 text-[#CCFF00]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.75l-2.5 1zm0 2.25l-5-2.5-5 2.5 10 5 10-5-5-2.5-5 2.5z" /></svg>
                         </div>
-                        <h3 className="text-gray-500 font-mono text-xs tracking-widest mb-1">AGGREGATE_WORK</h3>
+                        <h3 className="text-gray-500 font-mono text-xs tracking-widest mb-1">AGGREGATE_WORK ({viewMode.toUpperCase()})</h3>
                         <div className="text-4xl font-black font-tech text-white mb-2">{workingDays} <span className="text-sm font-mono text-gray-600">DAYS</span></div>
                         <div className="w-full bg-[#1F1F1F] h-1">
-                            <div className="h-full bg-[#CCFF00] shadow-[0_0_10px_#CCFF00]" style={{ width: `${(workingDays / daysInMonth) * 100}%` }}></div>
+                            <div className="h-full bg-[#CCFF00] shadow-[0_0_10px_#CCFF00]" style={{ width: `${Math.min(100, (workingDays / (viewMode === 'monthly' ? daysInView : 365)) * 100)}%` }}></div>
                         </div>
                     </div>
 
@@ -232,10 +221,10 @@ export default function StatsPage() {
                         <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                             <svg className="w-24 h-24 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
                         </div>
-                        <h3 className="text-gray-500 font-mono text-xs tracking-widest mb-1">LEAVE_STATUS</h3>
+                        <h3 className="text-gray-500 font-mono text-xs tracking-widest mb-1">LEAVE_STATUS ({viewMode.toUpperCase()})</h3>
                         <div className="text-4xl font-black font-tech text-white mb-2">{leaveDays} <span className="text-sm font-mono text-gray-600">DAYS</span></div>
                         <div className="w-full bg-[#1F1F1F] h-1">
-                            <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${(leaveDays / daysInMonth) * 100}%` }}></div>
+                            <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${Math.min(100, (leaveDays / (viewMode === 'monthly' ? daysInView : 365)) * 100)}%` }}></div>
                         </div>
                     </div>
 
@@ -247,11 +236,11 @@ export default function StatsPage() {
                         <div className="space-y-2 font-mono text-[10px] text-gray-400">
                             <div className="flex justify-between">
                                 <span>EFFICIENCY_RATE:</span>
-                                <span className="text-white">94.2%</span>
+                                <span className="text-white">{totalEntries > 0 ? ((workingDays / totalEntries) * 100).toFixed(1) : 0}%</span>
                             </div>
                             <div className="flex justify-between">
-                                <span>NEXT_TARGET:</span>
-                                <span className="text-white">MAINTAIN</span>
+                                <span>ENTRIES_LOGGED:</span>
+                                <span className="text-white">{totalEntries}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span>SYNC_STATUS:</span>
@@ -261,6 +250,52 @@ export default function StatsPage() {
                     </div>
 
                 </div>
+
+                {/* Upcoming Government Holidays Table */}
+                <div className="panel-base p-1 clip-corner-1 relative bg-[#080808] border border-[#1F1F1F]">
+                    <div className="bg-[#0F0F0F] border-b border-[#1F1F1F] p-4 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <div className="w-1 h-4 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                            <span className="text-blue-500 font-mono text-xs tracking-widest uppercase">Upcoming_Chennai_Government_Holidays_2026</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-gray-600">SOURCE: TN_GOVT_GAZETTE_SYNC</div>
+                    </div>
+                    <div className="p-4 overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-[#1F1F1F]">
+                                    <th className="py-3 px-4 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-medium">Date</th>
+                                    <th className="py-3 px-4 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-medium">Holiday Name</th>
+                                    <th className="py-3 px-4 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-medium text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#1F1F1F]">
+                                {holidays.length > 0 ? holidays.map((holiday, idx) => (
+                                    <tr key={idx} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="py-4 px-4 font-mono text-sm text-[#CCFF00]">
+                                            {new Date(holiday.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td className="py-4 px-4 font-mono text-sm text-white">
+                                            {holiday.name}
+                                        </td>
+                                        <td className="py-4 px-4 text-right">
+                                            <span className="inline-block px-2 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[10px] font-mono">
+                                                OFFICIAL_LEAVE
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={3} className="py-8 text-center text-gray-500 font-mono text-xs">
+                                            NO_UPCOMING_HOLIDAYS_FOUND
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </main>
         </div>
     )
