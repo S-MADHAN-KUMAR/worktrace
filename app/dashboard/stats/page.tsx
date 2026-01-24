@@ -149,13 +149,13 @@ export default function StatsPage() {
             <header className="bg-[#050505]/90 border-b border-[#1F1F1F] px-6 h-20 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
                 <div className="flex items-center gap-6">
                     <Link href="/dashboard" className="flex items-center gap-3 group">
-                        <img src="/logo_laptop.png" alt="WT Logo" className="w-10 h-10 object-contain rounded-lg" />
-                        <span className="text-xs font-mono text-gray-500 group-hover:text-[#CCFF00] transition-colors">DASHBOARD_RETURN</span>
+                        <button className="btn-cyber-red font-mono text-xs flex items-center gap-2 mr-2">
+
+                <span>RETURN</span>
+              </button>
                     </Link>
-                    <div className="h-8 w-[1px] bg-[#1F1F1F]"></div>
-                    <h1 className="text-xl font-bold font-tech tracking-widest text-white/50 uppercase">
-                        TARGET_CONSOLE // CHENNAI_GOVT_SYNC // <span className="text-[#CCFF00]">{currentViewLabel}</span>
-                    </h1>
+                  
+                    
                 </div>
                 <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
                     <div className="flex bg-[#111] p-1 rounded-sm border border-[#333]">

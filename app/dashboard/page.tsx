@@ -18,12 +18,22 @@ interface WorkUpdate {
   is_leave: boolean
 }
 
+
+
+
+
 export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [workUpdates, setWorkUpdates] = useState<WorkUpdate[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   // const { theme, toggleTheme } = useTheme() // Disabled for Cyberpunk Mode
+const [time, setTime] = useState(new Date());
+
+useEffect(() => {
+  const id = setInterval(() => setTime(new Date()), 1000);
+  return () => clearInterval(id);
+}, []);
 
   useEffect(() => {
     const authenticated = localStorage.getItem('authenticated')
@@ -87,9 +97,9 @@ export default function DashboardPage() {
           <div className="flex items-center gap-6">
             {/* Logo / Title Block */}
             <div className="flex items-center gap-4 group cursor-pointer">
-              <img src="/logo_laptop.png" alt="WT Logo" className="w-10 h-10 object-contain rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
+              <img src="/logo.png" alt="WT Logo" className="w-16 h-16 object-contain" />
               <div className="flex flex-col">
-                <h1 className="text-2xl font-black tracking-tighter leading-none glitch-text" data-text="WORKTRACE ">
+                <h1 className="font-mono glitch-text text-2xl font-black tracking-tighter leading-none" data-text="WORKTRACE ">
                   WORKTRACE
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
@@ -103,8 +113,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-6">
             {/* Clock / Status (Static visual for now) */}
             <div className="hidden md:flex flex-col items-end mr-6 border-r border-[#1F1F1F] pr-6">
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Net_Link_Status</span>
-              <span className="text-neon font-mono text-sm">ENCRYPTED // SECURE</span>
+              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Time :</span>
+              <span className="text-neon font-mono ">
+                {time.toLocaleTimeString()}
+              </span>
             </div>
 
             <div className="h-full flex items-center gap-2">
@@ -113,16 +125,16 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  <span>DATA_VISUALIZATION</span>
+                  <span>Statistics</span>
                 </button>
               </Link>
 
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-mono text-xs font-bold uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] flex items-center gap-2"
-              >
-                <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                <span>TERMINATE_SESSION</span>
+
+              <button 
+              onClick={handleLogout}
+              className="btn-cyber-red font-mono text-xs flex items-center gap-2 mr-2">
+
+                <span>Exit</span>
               </button>
             </div>
           </div>
@@ -163,7 +175,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Stats / Info Panel */}
-            <div className="panel-base p-6 clip-corner-1 relative overflow-hidden group">
+            {/* <div className="panel-base p-6 clip-corner-1 relative overflow-hidden group">
               <div className="absolute inset-0 bg-grid opacity-10"></div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-10 h-10 bg-[#1F1F1F] flex items-center justify-center border border-[#333]">
@@ -185,7 +197,7 @@ export default function DashboardPage() {
                   <div className="text-lg font-mono text-blue-400">42%</div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Right Panel: Task Terminal */}
