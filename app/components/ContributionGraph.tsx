@@ -9,9 +9,7 @@ import {
     getDay,
     isSameDay,
     startOfMonth,
-    endOfMonth,
-    subMonths,
-    eachWeekOfInterval
+    endOfMonth
 } from 'date-fns'
 
 interface WorkUpdate {
@@ -21,16 +19,20 @@ interface WorkUpdate {
 
 interface ContributionGraphProps {
     data: WorkUpdate[]
-    mode?: 'yearly' | 'monthly'
+    mode?: 'yearly' | 'monthly' | 'range'
     year?: number
     month?: number // 0-11
+    startDate?: Date | string
+    endDate?: Date | string
 }
 
 const ContributionGraph: React.FC<ContributionGraphProps> = ({
     data,
     mode = 'yearly',
     year = new Date().getFullYear(),
-    month = new Date().getMonth()
+    month = new Date().getMonth(),
+    startDate,
+    endDate
 }) => {
     // Generate dates based on mode
     const dates = useMemo(() => {
@@ -39,32 +41,38 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
             const end = endOfYear(new Date(year, 0, 1))
             return eachDayOfInterval({ start, end })
         } else {
-            const start = startOfMonth(new Date(year, month, 1))
-            const end = endOfMonth(new Date(year, month, 1))
+            if (mode === 'monthly') {
+                const start = startOfMonth(new Date(year, month, 1))
+                const end = endOfMonth(new Date(year, month, 1))
+                return eachDayOfInterval({ start, end })
+            }
+
+            if (!startDate || !endDate) return []
+            const start = startOfMonth(new Date(startDate))
+            const end = endOfMonth(new Date(endDate))
             return eachDayOfInterval({ start, end })
         }
-    }, [mode, year, month])
+    }, [mode, year, month, startDate, endDate])
 
     // Group dates into weeks for the yearly view
     const weeks = useMemo(() => {
-        if (mode !== 'yearly') return []
+        if (mode === 'monthly') return []
 
-        const start = startOfYear(new Date(year, 0, 1))
-        const end = endOfYear(new Date(year, 0, 1))
+        const rangeDates = dates
+        if (!rangeDates.length) return []
 
         // Find the first Sunday/Monday before or on Jan 1st to align weeks
-        const calendarStart = start
         const weeksArr: Date[][] = []
         let currentWeek: Date[] = []
 
         // Pad the first week if Jan 1st is not the start of the week
-        const firstDayShift = getDay(start) // 0 (Sun) - 6 (Sat)
+        const firstDayShift = getDay(rangeDates[0]) // 0 (Sun) - 6 (Sat)
         // Adjust for Mon-Sun if needed, but GitHub usually starts Sun
         for (let i = 0; i < firstDayShift; i++) {
             currentWeek.push(null as any)
         }
 
-        dates.forEach((date) => {
+        rangeDates.forEach((date) => {
             if (currentWeek.length === 7) {
                 weeksArr.push(currentWeek)
                 currentWeek = []
@@ -80,7 +88,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
         }
 
         return weeksArr
-    }, [dates, mode, year])
+    }, [dates, mode])
 
     const getLevel = (date: Date) => {
         if (!date) return 0
@@ -103,40 +111,97 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
     if (mode === 'monthly') {
+        const maxLevel = Math.max(...dates.map(d => getLevel(d)), 3)
+        const chartHeight = 200
+
         return (
             <div className="flex flex-col gap-4 p-4 bg-[#050505] rounded-sm border border-[#1f1f1f] font-mono">
                 <div className="flex justify-between items-center text-gray-500 text-[10px] tracking-widest border-b border-[#1f1f1f] pb-2">
-                    <span className="font-bold text-[#CCFF00]">CALENDAR_VIEW // {format(new Date(year, month), 'MMMM yyyy').toUpperCase()}</span>
+                    <span className="font-bold text-[#CCFF00]">TRADING_GRAPH // {format(new Date(year, month), 'MMMM yyyy').toUpperCase()}</span>
                 </div>
-                <div className="grid grid-cols-7 gap-2">
-                    {dayLabels.map(day => (
-                        <div key={day} className="text-[9px] text-gray-600 text-center font-bold">{day.toUpperCase()}</div>
-                    ))}
-                    {Array.from({ length: getDay(dates[0]) }).map((_, i) => (
-                        <div key={`pad-${i}`} className="w-5 h-5 md:w-9 md:h-9" />
-                    ))}
-                    {dates.map((date, i) => {
-                        const level = getLevel(date)
-                        return (
-                            <div
-                                key={i}
-                                className={`w-5 h-5 md:w-9 md:h-9 rounded-sm ${getColor(level)} transition-all duration-300 group relative border border-transparent hover:border-[#CCFF00]/50`}
-                            >
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0f0f0f] text-[#CCFF00] text-[9px] rounded-sm opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-[#CCFF00]/30 shadow-[0_0_15px_rgba(0,0,0,0.5)] font-mono">
-                                    [{format(date, 'yyyy.MM.dd')}]
-                                    {level > 0 && ` > ${level === 3 ? 'WORK_SUCCESS' : 'LEAVE_LOGGED'}`}
-                                </div>
+
+                {/* Trading Chart */}
+                <div className="relative w-full" style={{ height: `${chartHeight}px` }}>
+                    {/* Y-axis grid lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="w-full border-t border-[#1f1f1f] relative">
+                                <span className="absolute -left-8 -top-2 text-[8px] text-gray-700">{maxLevel - (i * maxLevel / 4)}</span>
                             </div>
-                        )
-                    })}
+                        ))}
+                    </div>
+
+                    {/* Chart bars */}
+                    <div className="absolute inset-0 flex items-end gap-[2px] px-8">
+                        {dates.map((date, i) => {
+                            const level = getLevel(date)
+                            const height = level > 0 ? (level / maxLevel) * 100 : 0
+                            const isLeave = level === 1
+                            const isWork = level === 3
+
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex-1 group relative cursor-crosshair transition-all duration-300 hover:opacity-80"
+                                    style={{ height: `${height}%`, minWidth: '4px' }}
+                                >
+                                    {/* Bar */}
+                                    <div
+                                        className={`w-full h-full relative ${
+                                            isWork
+                                                ? 'bg-gradient-to-t from-[#CCFF00] to-[#e5ff80] shadow-[0_0_10px_rgba(204,255,0,0.5)]'
+                                                : isLeave
+                                                ? 'bg-gradient-to-t from-red-500 to-red-400 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+                                                : 'bg-[#1a1a1a]'
+                                        }`}
+                                    >
+                                        {/* Highlight on top */}
+                                        {level > 0 && (
+                                            <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/30"></div>
+                                        )}
+                                    </div>
+
+                                    {/* Tooltip */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0f0f0f] text-[#CCFF00] text-[9px] rounded-sm opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-[#CCFF00]/30 shadow-[0_0_20px_rgba(0,0,0,0.8)] font-mono">
+                                        <div className="flex flex-col gap-1">
+                                            <span>[{format(date, 'MMM dd, yyyy')}]</span>
+                                            {level > 0 && (
+                                                <span className="text-[8px]">
+                                                    {isWork ? '▲ WORK_SUCCESS' : '▼ LEAVE_LOGGED'} ({level})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* X-axis labels */}
+                    <div className="absolute -bottom-6 left-8 right-8 flex justify-between text-[8px] text-gray-600">
+                        {dates.filter((_, i) => i % 5 === 0 || i === dates.length - 1).map((date, i) => (
+                            <span key={i}>{format(date, 'dd')}</span>
+                        ))}
+                    </div>
                 </div>
-                <div className="flex items-center justify-end gap-1 text-[9px] text-gray-600 font-mono">
-                    <span className="mr-2">ACTIVITY_LEVELS:</span>
-                    <div className="w-3 h-3 bg-[#1a1a1a]"></div>
-                    <div className="w-3 h-3 bg-red-500/80"></div>
-                    <div className="w-3 h-3 bg-[#CCFF00]/40"></div>
-                    <div className="w-3 h-3 bg-[#CCFF00]"></div>
-                    <span className="ml-2 font-bold text-gray-400">HIGH</span>
+
+                {/* Legend */}
+                <div className="flex items-center justify-between gap-4 text-[9px] text-gray-600 font-mono mt-8 pt-2 border-t border-[#1f1f1f]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-3 bg-gradient-to-t from-[#CCFF00] to-[#e5ff80]"></div>
+                            <span>WORK</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-3 bg-gradient-to-t from-red-500 to-red-400"></div>
+                            <span>LEAVE</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-3 bg-[#1a1a1a]"></div>
+                            <span>NO_DATA</span>
+                        </div>
+                    </div>
+                    <span className="text-gray-700">MARKET_ANALYSIS_MODE</span>
                 </div>
             </div>
         )
@@ -145,7 +210,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
     // Yearly View (Cyberpunk Heatmap)
     return (
         <div className="flex flex-col gap-2 p-4 bg-[#050505] rounded-sm border border-[#1f1f1f] font-mono w-full overflow-x-auto custom-scrollbar">
-            <div className="flex gap-2 min-w-max">
+            <div className="flex gap-2 w-full min-w-0">
                 {/* Y-axis labels */}
                 <div className="flex flex-col gap-1 pt-6 text-[9px] text-gray-600 w-8 font-bold">
                     <div className="h-3"></div>
@@ -159,40 +224,40 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
 
                 <div className="flex flex-col gap-1">
                     {/* Month Labels */}
-                    <div className="flex text-[9px] text-gray-600 h-4 items-end mb-1 font-bold">
+                    <div className="flex text-[9px] text-gray-600 h-4 items-end mb-1 font-bold gap-1 w-full">
                         {weeks.map((week, i) => {
                             const firstDay = week.find(d => d !== null)
                             if (firstDay && i > 0) {
                                 const prevWeekFirstDay = weeks[i - 1].find(d => d !== null)
                                 if (prevWeekFirstDay && firstDay.getMonth() !== prevWeekFirstDay.getMonth()) {
                                     return (
-                                        <div key={i} className="flex-none text-[#CCFF00]/60" style={{ width: '16px' }}>
+                                        <div key={i} className="flex-1 min-w-[12px] text-[#CCFF00]/60 text-center">
                                             {format(firstDay, 'MMM').toUpperCase()}
                                         </div>
                                     )
                                 }
                             } else if (firstDay && i === 0) {
                                 return (
-                                    <div key={i} className="flex-none text-[#CCFF00]/60" style={{ width: '16px' }}>
+                                    <div key={i} className="flex-1 min-w-[12px] text-[#CCFF00]/60 text-center">
                                         {format(firstDay, 'MMM').toUpperCase()}
                                     </div>
                                 )
                             }
-                            return <div key={i} className="flex-none" style={{ width: '16px' }} />
+                            return <div key={i} className="flex-1 min-w-[12px]" />
                         })}
                     </div>
 
                     {/* Columns (Weeks) */}
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 w-full">
                         {weeks.map((week, weekIndex) => (
-                            <div key={weekIndex} className="flex flex-col gap-1">
+                            <div key={weekIndex} className="flex flex-col gap-1 flex-1 min-w-[12px]">
                                 {week.map((date, dayIndex) => {
-                                    if (!date) return <div key={dayIndex} className="w-3 h-3" />
+                                    if (!date) return <div key={dayIndex} className="w-full aspect-square" />
                                     const level = getLevel(date)
                                     return (
                                         <div
                                             key={dayIndex}
-                                            className={`w-3 h-3 rounded-[1px] ${getColor(level)} transition-all duration-300 group relative cursor-crosshair border border-transparent hover:border-[#CCFF00]`}
+                                            className={`w-full aspect-square rounded-[1px] ${getColor(level)} transition-all duration-300 group relative cursor-crosshair border border-transparent hover:border-[#CCFF00]`}
                                         >
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-[#0f0f0f] text-[#CCFF00] text-[9px] rounded-sm opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 border border-[#CCFF00]/30 shadow-[0_0_20px_rgba(0,0,0,0.8)] font-mono">
                                                 [{format(date, 'yyyy.MM.dd')}]

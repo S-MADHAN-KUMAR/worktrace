@@ -112,12 +112,14 @@ useEffect(() => {
 
           <div className="flex items-center gap-6">
             {/* Clock / Status (Static visual for now) */}
-            <div className="hidden md:flex flex-col items-end mr-6 border-r border-[#1F1F1F] pr-6">
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Time :</span>
-              <span className="text-neon font-mono ">
-                {time.toLocaleTimeString()}
-              </span>
-            </div>
+            <Link href="/time">
+              <div className="hidden md:flex flex-col items-end mr-6 border-r border-[#1F1F1F] pr-6 cursor-pointer group hover:scale-105 transition-transform">
+                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest group-hover:text-[#CCFF00]">Time :</span>
+                <span className="text-neon font-mono group-hover:text-[#CCFF00]">
+                  {time.toLocaleTimeString()}
+                </span>
+              </div>
+            </Link>
 
             <div className="h-full flex items-center gap-2">
               <Link href="/dashboard/stats">

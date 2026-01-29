@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import ContributionGraph from '@/app/components/ContributionGraph'
-import { startOfMonth, endOfMonth, isWithinInterval, startOfYear, endOfYear } from 'date-fns'
+import { startOfMonth, endOfMonth, isWithinInterval, format, differenceInCalendarDays } from 'date-fns'
+
+const RANGE_START = new Date(2025, 10, 1) // November 1, 2025
+const RANGE_END = endOfMonth(new Date(2026, 11, 1)) // December 31, 2026
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +30,7 @@ export default function StatsPage() {
     const [workUpdates, setWorkUpdates] = useState<WorkUpdate[]>([])
     const [holidays, setHolidays] = useState<Holiday[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('yearly')
+    const [viewMode, setViewMode] = useState<'monthly' | 'range'>('range')
     const router = useRouter()
 
     useEffect(() => {
@@ -36,9 +39,12 @@ export default function StatsPage() {
             router.push('/login')
             return
         }
-        loadStatsData()
-        fetchHolidays()
+        loadStatsData(RANGE_START, RANGE_END)
     }, [router])
+
+    useEffect(() => {
+        fetchHolidays()
+    }, [])
 
     const fetchHolidays = async () => {
         // Fallback holiday data for India 2026
@@ -91,12 +97,11 @@ export default function StatsPage() {
         }
     }
 
-    const loadStatsData = async () => {
+    const loadStatsData = async (startDate: Date, endDate: Date) => {
         try {
             setIsLoading(true)
-            const now = new Date()
-            const startStr = startOfYear(now).toISOString()
-            const endStr = endOfYear(now).toISOString()
+            const startStr = startDate.toISOString()
+            const endStr = endDate.toISOString()
 
             const { data, error } = await supabase
                 .from('work_updates')
@@ -114,22 +119,24 @@ export default function StatsPage() {
     }
 
     // Calculations based on current view
-    const now = new Date()
+    const focusMonthDate = RANGE_START
     const filteredUpdates = viewMode === 'monthly'
-        ? workUpdates.filter(u => isWithinInterval(new Date(u.date), { start: startOfMonth(now), end: endOfMonth(now) }))
+        ? workUpdates.filter(u => isWithinInterval(new Date(u.date), { start: startOfMonth(focusMonthDate), end: endOfMonth(focusMonthDate) }))
         : workUpdates
 
     const totalEntries = filteredUpdates.length
     const leaveDays = filteredUpdates.filter(u => u.is_leave).length
     const workingDays = totalEntries - leaveDays
 
-    const currentViewLabel = viewMode === 'monthly'
-        ? now.toLocaleString('default', { month: 'long' }).toUpperCase()
-        : now.getFullYear().toString()
+    const focusLabel = format(focusMonthDate, 'MMMM yyyy').toUpperCase()
+    const rangeLabel = `${format(RANGE_START, 'MMMM yyyy').toUpperCase()} - ${format(RANGE_END, 'MMMM yyyy').toUpperCase()}`
+    const scopeLabel = viewMode === 'range'
+        ? rangeLabel
+        : focusLabel
 
     const daysInView = viewMode === 'monthly'
-        ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-        : 365 // Simplified
+        ? endOfMonth(focusMonthDate).getDate()
+        : differenceInCalendarDays(RANGE_END, RANGE_START) + 1
 
     if (isLoading) {
         return (
@@ -166,10 +173,10 @@ export default function StatsPage() {
                             MONTHLY
                         </button>
                         <button
-                            onClick={() => setViewMode('yearly')}
-                            className={`px-3 py-1 rounded-sm transition-all ${viewMode === 'yearly' ? 'bg-[#CCFF00] text-black' : 'text-gray-500 hover:text-white'}`}
+                            onClick={() => setViewMode('range')}
+                            className={`px-3 py-1 rounded-sm transition-all ${viewMode === 'range' ? 'bg-[#CCFF00] text-black' : 'text-gray-500 hover:text-white'}`}
                         >
-                            YEARLY
+                            RANGE
                         </button>
                     </div>
                 </div>
@@ -194,61 +201,19 @@ export default function StatsPage() {
 
                     {/* Graph Container */}
                     <div className="relative w-full bg-[#050505] p-2 md:p-6">
+                        <div className="flex items-center justify-between text-[10px] text-gray-600 font-mono mb-4">
+                            <span>DISPLAY_MODE // {viewMode.toUpperCase()}</span>
+                            <span className="text-[#CCFF00] font-bold">{scopeLabel}</span>
+                        </div>
                         <ContributionGraph
                             data={workUpdates}
                             mode={viewMode}
+                            year={focusMonthDate.getFullYear()}
+                            month={focusMonthDate.getMonth()}
+                            startDate={RANGE_START}
+                            endDate={RANGE_END}
                         />
                     </div>
-                </div>
-
-                {/* Bottom Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                    {/* Card 1: Work */}
-                    <div className="panel-base p-6 bg-[#0A0A0A] border-l-4 border-l-[#CCFF00] relative overflow-hidden group">
-                        <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <svg className="w-24 h-24 text-[#CCFF00]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.75l-2.5 1zm0 2.25l-5-2.5-5 2.5 10 5 10-5-5-2.5-5 2.5z" /></svg>
-                        </div>
-                        <h3 className="text-gray-500 font-mono text-xs tracking-widest mb-1">AGGREGATE_WORK ({viewMode.toUpperCase()})</h3>
-                        <div className="text-4xl font-black font-tech text-white mb-2">{workingDays} <span className="text-sm font-mono text-gray-600">DAYS</span></div>
-                        <div className="w-full bg-[#1F1F1F] h-1">
-                            <div className="h-full bg-[#CCFF00] shadow-[0_0_10px_#CCFF00]" style={{ width: `${Math.min(100, (workingDays / (viewMode === 'monthly' ? daysInView : 365)) * 100)}%` }}></div>
-                        </div>
-                    </div>
-
-                    {/* Card 2: Leave */}
-                    <div className="panel-base p-6 bg-[#0A0A0A] border-l-4 border-l-red-500 relative overflow-hidden group">
-                        <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <svg className="w-24 h-24 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
-                        </div>
-                        <h3 className="text-gray-500 font-mono text-xs tracking-widest mb-1">LEAVE_STATUS ({viewMode.toUpperCase()})</h3>
-                        <div className="text-4xl font-black font-tech text-white mb-2">{leaveDays} <span className="text-sm font-mono text-gray-600">DAYS</span></div>
-                        <div className="w-full bg-[#1F1F1F] h-1">
-                            <div className="h-full bg-red-500 shadow-[0_0_10px_red]" style={{ width: `${Math.min(100, (leaveDays / (viewMode === 'monthly' ? daysInView : 365)) * 100)}%` }}></div>
-                        </div>
-                    </div>
-
-                    {/* Card 3: Optimization */}
-                    <div className="panel-base p-6 bg-[#050505] border border-[#1F1F1F] flex flex-col justify-between">
-                        <div className="text-xs font-mono text-[#CCFF00] mb-2 border-b border-[#333] pb-2">
-                            SYSTEM_ADVISORY
-                        </div>
-                        <div className="space-y-2 font-mono text-[10px] text-gray-400">
-                            <div className="flex justify-between">
-                                <span>EFFICIENCY_RATE:</span>
-                                <span className="text-white">{totalEntries > 0 ? ((workingDays / totalEntries) * 100).toFixed(1) : 0}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>ENTRIES_LOGGED:</span>
-                                <span className="text-white">{totalEntries}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>SYNC_STATUS:</span>
-                                <span className="text-[#CCFF00] animate-pulse">OPTIMAL</span>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
 
                 {/* Upcoming Government Holidays Table */}
