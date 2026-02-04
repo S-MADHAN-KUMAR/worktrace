@@ -8,6 +8,8 @@ interface WorkUpdate {
   date: string
   description: string | null
   is_leave: boolean
+  sick_leave?: boolean
+  casual_leave?: boolean
 }
 
 interface CalendarProps {
@@ -92,7 +94,9 @@ export default function Calendar({ selectedDate, onDateSelect, workUpdates }: Ca
         {daysInMonth.map(day => {
           const workUpdate = getWorkUpdateForDate(day)
           const isLeaveDay = workUpdate?.is_leave ?? false
-          const hasTask = workUpdate && !isLeaveDay && workUpdate.description
+          const isSickLeaveDay = workUpdate?.sick_leave ?? false
+          const isCasualLeaveDay = workUpdate?.casual_leave ?? false
+          const hasTask = workUpdate && !isLeaveDay && !isSickLeaveDay && !isCasualLeaveDay && workUpdate.description
           const isWeekend = !isWorkingDay(day)
           const isSelected = selectedDate && isSameDay(day, selectedDate)
           const isCurrentDay = isToday(day)
@@ -120,10 +124,16 @@ export default function Calendar({ selectedDate, onDateSelect, workUpdates }: Ca
               {/* Status Indicators */}
               <div className="absolute bottom-1 w-full flex justify-center gap-0.5 px-1">
                 {hasTask && (
-                  <div className={`h-[2px] w-[60%] ${isSelected ? 'bg-black' : 'bg-blue-500'} `}></div>
+                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-blue-500'} `}></div>
                 )}
                 {isLeaveDay && (
-                  <div className={`h-[2px] w-[60%] ${isSelected ? 'bg-black' : 'bg-red-500'} `}></div>
+                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-red-500'} `}></div>
+                )}
+                {isSickLeaveDay && (
+                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-orange-500'} `}></div>
+                )}
+                {isCasualLeaveDay && (
+                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-purple-500'} `}></div>
                 )}
               </div>
 
@@ -148,7 +158,15 @@ export default function Calendar({ selectedDate, onDateSelect, workUpdates }: Ca
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-0.5 bg-red-500"></div>
-          <span>Leave_Status</span>
+          <span>Leave</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-0.5 bg-orange-500"></div>
+          <span>Sick_Leave</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-0.5 bg-purple-500"></div>
+          <span>Casual_Leave</span>
         </div>
       </div>
     </div>

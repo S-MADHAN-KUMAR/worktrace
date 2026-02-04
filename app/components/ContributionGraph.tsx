@@ -15,6 +15,8 @@ import {
 interface WorkUpdate {
     date: string
     is_leave: boolean
+    sick_leave?: boolean
+    casual_leave?: boolean
 }
 
 interface ContributionGraphProps {
@@ -94,16 +96,19 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
         if (!date) return 0
         const entry = data.find(u => isSameDay(new Date(u.date), date))
         if (!entry) return 0
-        return entry.is_leave ? 1 : 3 // 1 for leave, 3 for work
+        if (entry.is_leave) return 1 // Regular leave
+        if (entry.sick_leave) return 2 // Sick leave
+        if (entry.casual_leave) return 4 // Casual leave
+        return 3 // Work
     }
 
     const getColor = (level: number) => {
         switch (level) {
             case 0: return 'bg-[#1a1a1a]' // Empty/Void
-            case 1: return 'bg-red-500/80 shadow-[0_0_5px_rgba(239,68,68,0.4)]' // Leave (Red to match your Leave status)
-            case 2: return 'bg-[#CCFF00]/40'
+            case 1: return 'bg-red-500/80 shadow-[0_0_5px_rgba(239,68,68,0.4)]' // Leave (Red)
+            case 2: return 'bg-orange-500/80 shadow-[0_0_5px_rgba(234,88,12,0.4)]' // Sick Leave (Orange)
             case 3: return 'bg-[#CCFF00] shadow-[0_0_8px_rgba(204,255,0,0.5)]' // Work (Main Cyberpunk Color)
-            case 4: return 'bg-[#e5ff80] shadow-[0_0_12px_rgba(204,255,0,0.8)]' // Peak
+            case 4: return 'bg-purple-500/80 shadow-[0_0_5px_rgba(168,85,247,0.4)]' // Casual Leave (Purple)
             default: return 'bg-[#1a1a1a]'
         }
     }
@@ -137,7 +142,9 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                             const level = getLevel(date)
                             const height = level > 0 ? (level / maxLevel) * 100 : 0
                             const isLeave = level === 1
+                            const isSickLeave = level === 2
                             const isWork = level === 3
+                            const isCasualLeave = level === 4
 
                             return (
                                 <div
@@ -152,6 +159,10 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                                                 ? 'bg-gradient-to-t from-[#CCFF00] to-[#e5ff80] shadow-[0_0_10px_rgba(204,255,0,0.5)]'
                                                 : isLeave
                                                 ? 'bg-gradient-to-t from-red-500 to-red-400 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+                                                : isSickLeave
+                                                ? 'bg-gradient-to-t from-orange-500 to-orange-400 shadow-[0_0_10px_rgba(234,88,12,0.5)]'
+                                                : isCasualLeave
+                                                ? 'bg-gradient-to-t from-purple-500 to-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.5)]'
                                                 : 'bg-[#1a1a1a]'
                                         }`}
                                     >
@@ -167,7 +178,7 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                                             <span>[{format(date, 'MMM dd, yyyy')}]</span>
                                             {level > 0 && (
                                                 <span className="text-[8px]">
-                                                    {isWork ? '▲ WORK_SUCCESS' : '▼ LEAVE_LOGGED'} ({level})
+                                                    {isWork ? '▲ WORK_SUCCESS' : isLeave ? '▼ LEAVE_LOGGED' : isSickLeave ? '▼ SICK_LEAVE' : '▼ CASUAL_LEAVE'} ({level})
                                                 </span>
                                             )}
                                         </div>
@@ -195,6 +206,14 @@ const ContributionGraph: React.FC<ContributionGraphProps> = ({
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-3 bg-gradient-to-t from-red-500 to-red-400"></div>
                             <span>LEAVE</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-3 bg-gradient-to-t from-orange-500 to-orange-400"></div>
+                            <span>SICK_LEAVE</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-3 bg-gradient-to-t from-purple-500 to-purple-400"></div>
+                            <span>CASUAL_LEAVE</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-3 bg-[#1a1a1a]"></div>

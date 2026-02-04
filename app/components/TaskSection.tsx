@@ -9,6 +9,8 @@ interface WorkUpdate {
   date: string
   description: string | null
   is_leave: boolean
+  sick_leave?: boolean
+  casual_leave?: boolean
 }
 
 interface WorkUpdateImage {
@@ -26,11 +28,15 @@ interface TaskSectionProps {
 export default function TaskSection({ selectedDate, workUpdates, onUpdate }: TaskSectionProps) {
   const [description, setDescription] = useState('')
   const [isLeave, setIsLeave] = useState(false)
+  const [sickLeave, setSickLeave] = useState(false)
+  const [casualLeave, setCasualLeave] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<WorkUpdateImage[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [pasteNotification, setPasteNotification] = useState<string | null>(null)
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dropZoneRef = useRef<HTMLDivElement>(null)
 
@@ -46,14 +52,20 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
     if (selectedDate && currentWorkUpdate) {
       setDescription(currentWorkUpdate.description || '')
       setIsLeave(currentWorkUpdate.is_leave || false)
+      setSickLeave(currentWorkUpdate.sick_leave || false)
+      setCasualLeave(currentWorkUpdate.casual_leave || false)
       loadExistingImages(currentWorkUpdate.id)
     } else if (selectedDate) {
       setDescription('')
       setIsLeave(false)
+      setSickLeave(false)
+      setCasualLeave(false)
       setExistingImages([])
     } else {
       setDescription('')
       setIsLeave(false)
+      setSickLeave(false)
+      setCasualLeave(false)
       setImages([])
       setImagePreviews([])
       setExistingImages([])
@@ -91,6 +103,13 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
     }
   }, [selectedDate])
 
+  useEffect(() => {
+    if (existingImages.length === 0 && imagePreviews.length === 0) {
+      setHoveredImage(null)
+      setLightboxImage(null)
+    }
+  }, [existingImages, imagePreviews])
+
   const loadExistingImages = async (workUpdateId: string) => {
     try {
       const { data, error } = await supabase
@@ -121,7 +140,12 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index))
     setImagePreviews(prev => {
-      URL.revokeObjectURL(prev[index])
+      const target = prev[index]
+      if (target) {
+        URL.revokeObjectURL(target)
+        setHoveredImage(current => current === target ? null : current)
+        setLightboxImage(current => current === target ? null : current)
+      }
       return prev.filter((_, i) => i !== index)
     })
   }
@@ -151,6 +175,8 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
 
       if (dbError) throw dbError
 
+      setHoveredImage(current => current === imageUrl ? null : current)
+      setLightboxImage(current => current === imageUrl ? null : current)
       setExistingImages(prev => prev.filter(img => img.id !== imageId))
     } catch (error) {
       console.error('Error removing image:', error)
@@ -220,9 +246,11 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
       const dateStr = format(selectedDate, 'yyyy-MM-dd')
 
       if (currentWorkUpdate) {
-        const updateData: { description: string; is_leave: boolean; updated_at?: string } = {
-          description: isLeave ? '' : (description.trim() || ''),
-          is_leave: isLeave
+        const updateData: { description: string; is_leave: boolean; sick_leave: boolean; casual_leave: boolean; updated_at?: string } = {
+          description: (isLeave || sickLeave || casualLeave) ? '' : (description.trim() || ''),
+          is_leave: isLeave,
+          sick_leave: sickLeave,
+          casual_leave: casualLeave
         }
 
         const { error: updateError } = await supabase
@@ -240,10 +268,12 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
           }
         }
       } else {
-        const insertData: { date: string; description: string; is_leave: boolean } = {
+        const insertData: { date: string; description: string; is_leave: boolean; sick_leave: boolean; casual_leave: boolean } = {
           date: dateStr,
-          description: isLeave ? '' : (description.trim() || ''),
-          is_leave: isLeave
+          description: (isLeave || sickLeave || casualLeave) ? '' : (description.trim() || ''),
+          is_leave: isLeave,
+          sick_leave: sickLeave,
+          casual_leave: casualLeave
         }
 
         const { data: newWorkUpdate, error: insertError } = await supabase
@@ -310,15 +340,15 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
           <div className="flex items-center gap-2 mt-1">
             <span className="w-1.5 h-1.5 bg-[#CCFF00] rounded-full animate-pulse"></span>
             <p className="text-gray-500 text-[10px] font-mono uppercase tracking-widest">
-              Entry_Mode: {isLeave ? 'STANDBY' : 'ACTIVE_LOG'}
+              Entry_Mode: {isLeave ? 'LEAVE' : sickLeave ? 'SICK_LEAVE' : casualLeave ? 'CASUAL_LEAVE' : 'ACTIVE_LOG'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center gap-2 flex-wrap">
           <label className={`
-             relative cursor-pointer flex items-center gap-3 px-4 py-2 border transition-all duration-300
-             ${isLeave ? 'border-red-500 bg-red-500/10' : 'border-[#333] hover:border-[#CCFF00]'}
+             relative cursor-pointer flex items-center gap-2 px-3 py-2 border transition-all duration-300
+             ${isLeave ? 'border-red-500 bg-red-500/10' : 'border-[#333] hover:border-red-500'}
           `}>
             <input
               type="checkbox"
@@ -326,13 +356,65 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
               onChange={(e) => {
                 const checked = e.target.checked
                 setIsLeave(checked)
-                if (checked) setDescription('')
+                if (checked) {
+                  setSickLeave(false)
+                  setCasualLeave(false)
+                  setDescription('')
+                }
               }}
               className="hidden"
             />
             <div className={`w-3 h-3 border ${isLeave ? 'bg-red-500 border-red-500' : 'border-gray-500'}`}></div>
             <span className={`text-xs font-mono font-bold uppercase tracking-wider ${isLeave ? 'text-red-500' : 'text-gray-400'}`}>
-              Set_Leave_Status
+              Leave
+            </span>
+          </label>
+
+          <label className={`
+             relative cursor-pointer flex items-center gap-2 px-3 py-2 border transition-all duration-300
+             ${sickLeave ? 'border-orange-500 bg-orange-500/10' : 'border-[#333] hover:border-orange-500'}
+          `}>
+            <input
+              type="checkbox"
+              checked={sickLeave}
+              onChange={(e) => {
+                const checked = e.target.checked
+                setSickLeave(checked)
+                if (checked) {
+                  setIsLeave(false)
+                  setCasualLeave(false)
+                  setDescription('')
+                }
+              }}
+              className="hidden"
+            />
+            <div className={`w-3 h-3 border ${sickLeave ? 'bg-orange-500 border-orange-500' : 'border-gray-500'}`}></div>
+            <span className={`text-xs font-mono font-bold uppercase tracking-wider ${sickLeave ? 'text-orange-500' : 'text-gray-400'}`}>
+              Sick
+            </span>
+          </label>
+
+          <label className={`
+             relative cursor-pointer flex items-center gap-2 px-3 py-2 border transition-all duration-300
+             ${casualLeave ? 'border-purple-500 bg-purple-500/10' : 'border-[#333] hover:border-purple-500'}
+          `}>
+            <input
+              type="checkbox"
+              checked={casualLeave}
+              onChange={(e) => {
+                const checked = e.target.checked
+                setCasualLeave(checked)
+                if (checked) {
+                  setIsLeave(false)
+                  setSickLeave(false)
+                  setDescription('')
+                }
+              }}
+              className="hidden"
+            />
+            <div className={`w-3 h-3 border ${casualLeave ? 'bg-purple-500 border-purple-500' : 'border-gray-500'}`}></div>
+            <span className={`text-xs font-mono font-bold uppercase tracking-wider ${casualLeave ? 'text-purple-500' : 'text-gray-400'}`}>
+              Casual
             </span>
           </label>
         </div>
@@ -352,8 +434,8 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              disabled={isLeave}
-              placeholder={isLeave ? ">>> HARDWARE_STATUS: STANDBY_MODE..." : ">>> IDENTITY: ENG_USER\n>>> ACTION: LOG_WORK..."}
+              disabled={isLeave || sickLeave || casualLeave}
+              placeholder={isLeave || sickLeave || casualLeave ? ">>> HARDWARE_STATUS: STANDBY_MODE..." : ">>> IDENTITY: ENG_USER\n>>> ACTION: LOG_WORK..."}
               rows={8}
               className="w-full bg-[#080808] text-[#CCFF00] font-mono text-sm p-4 border border-[#1F1F1F] focus:border-[#CCFF00] focus:outline-none resize-none placeholder-gray-800 leading-relaxed selection:bg-[#CCFF00] selection:text-black"
               spellCheck={false}
@@ -391,39 +473,68 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
         </div>
 
         {(imagePreviews.length > 0 || existingImages.length > 0) && (
-          <div className="grid grid-cols-4 gap-2">
-            {existingImages.map((image) => (
-              <div key={image.id} className="relative aspect-square group overflow-hidden border border-[#333]">
-                <img
-                  src={image.image_url}
-                  alt="Existing"
-                  className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
-                />
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeExistingImage(image.id, image.image_url); }}
-                  className="absolute top-1 right-1 bg-black text-red-500 text-xs w-5 h-5 flex items-center justify-center hover:bg-red-500 hover:text-black"
+          <div className="flex flex-col md:flex-row md:items-start gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+              {existingImages.map((image) => (
+                <div
+                  key={image.id}
+                  className="relative aspect-square group overflow-hidden border border-[#333] cursor-zoom-in"
+                  onMouseEnter={() => setHoveredImage(image.image_url)}
+                  onMouseLeave={() => setHoveredImage(prev => prev === image.image_url ? null : prev)}
+                  onClick={(e) => { e.stopPropagation(); setLightboxImage(image.image_url); }}
                 >
-                  X
-                </button>
-                <div className="absolute bottom-1 left-1 bg-black px-1 text-[8px] font-mono text-[#CCFF00]">SERVER</div>
-              </div>
-            ))}
-            {imagePreviews.map((preview, index) => (
-              <div key={`new-${index}`} className="relative aspect-square group overflow-hidden border border-[#CCFF00]/50">
-                <img
-                  src={preview}
-                  alt="New preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeImage(index); }}
-                  className="absolute top-1 right-1 bg-black text-red-500 text-xs w-5 h-5 flex items-center justify-center hover:bg-red-500 hover:text-black"
+                  <img
+                    src={image.image_url}
+                    alt="Existing"
+                    className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-300 group-hover:scale-105"
+                  />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeExistingImage(image.id, image.image_url); }}
+                    className="absolute top-1 right-1 bg-black text-red-500 text-xs w-5 h-5 flex items-center justify-center hover:bg-red-500 hover:text-black"
+                  >
+                    X
+                  </button>
+                  <div className="absolute bottom-1 left-1 bg-black px-1 text-[8px] font-mono text-[#CCFF00]">SERVER</div>
+                </div>
+              ))}
+              {imagePreviews.map((preview, index) => (
+                <div
+                  key={`new-${index}`}
+                  className="relative aspect-square group overflow-hidden border border-[#CCFF00]/50 cursor-zoom-in"
+                  onMouseEnter={() => setHoveredImage(preview)}
+                  onMouseLeave={() => setHoveredImage(prev => prev === preview ? null : prev)}
+                  onClick={(e) => { e.stopPropagation(); setLightboxImage(preview); }}
                 >
-                  X
-                </button>
-                <div className="absolute bottom-1 left-1 bg-[#CCFF00] text-black px-1 text-[8px] font-mono font-bold">BUFFER</div>
-              </div>
-            ))}
+                  <img
+                    src={preview}
+                    alt="New preview"
+                    className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
+                  />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                    className="absolute top-1 right-1 bg-black text-red-500 text-xs w-5 h-5 flex items-center justify-center hover:bg-red-500 hover:text-black"
+                  >
+                    X
+                  </button>
+                  <div className="absolute bottom-1 left-1 bg-[#CCFF00] text-black px-1 text-[8px] font-mono font-bold">BUFFER</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:flex flex-col items-center justify-center min-w-[18rem] max-w-sm border border-[#1F1F1F] bg-[#0F0F0F]/70 p-4">
+              {hoveredImage ? (
+                <>
+                  <div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest mb-2">Zoom_Preview</div>
+                  <div className="w-full h-[16rem] border border-[#1F1F1F] bg-black/40 flex items-center justify-center overflow-hidden">
+                    <img src={hoveredImage} alt="Zoom preview" className="object-contain w-full h-full" />
+                  </div>
+                </>
+              ) : (
+                <div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest text-center">
+                  Hover image tile for zoomed view
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -431,7 +542,7 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
       <div className="mt-8 pt-4 border-t border-[#1F1F1F]">
         <button
           onClick={handleSave}
-          disabled={isSaving || (!isLeave && !description.trim() && images.length === 0 && existingImages.length === 0)}
+          disabled={isSaving || (!isLeave && !sickLeave && !casualLeave && !description.trim() && images.length === 0 && existingImages.length === 0)}
           className="btn-cyber-filled w-full flex items-center justify-center gap-4 disabled:opacity-50 disabled:cursor-not-allowed group"
         >
           {isSaving ? (
@@ -444,6 +555,26 @@ export default function TaskSection({ selectedDate, workUpdates, onUpdate }: Tas
           )}
         </button>
       </div>
+
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            className="relative w-[80vw] h-[80vh] max-w-5xl border border-[#1F1F1F] bg-[#050505]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute -top-3 -right-3 bg-black text-[#CCFF00] w-8 h-8 flex items-center justify-center border border-[#1F1F1F] hover:bg-[#CCFF00] hover:text-black transition-colors"
+            >
+              X
+            </button>
+            <img src={lightboxImage} alt="Expanded preview" className="w-full h-full object-contain" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
