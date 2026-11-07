@@ -189,6 +189,7 @@ export default function DashboardPage() {
               selectedDate={selectedDate}
               workUpdates={workUpdates}
               onUpdate={loadWorkUpdates}
+              userName={userName}
             />
           </section>
         </section>
