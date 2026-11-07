@@ -357,11 +357,19 @@ export default function StatsPage() {
             </button>
           </div>
 
-          <Link href="/dashboard">
-            <button className="border border-[#2f2f2f] hover:border-[#444] bg-[#161616] text-[#ededed] hover:text-[#d4fc64] font-medium px-3 sm:px-4 py-1.5 rounded-full text-xs transition-all flex items-center gap-1.5">
-              <span>← <span className="hidden xs:inline">Dashboard</span><span className="xs:hidden">Back</span></span>
-            </button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/settings">
+              <button className="border border-[#2f2f2f] hover:border-[#444] bg-[#161616] text-[#ededed] hover:text-[#d4fc64] font-medium px-3 sm:px-4 py-1.5 rounded-full text-xs transition-all flex items-center gap-1.5">
+                <span>Settings</span>
+              </button>
+            </Link>
+
+            <Link href="/dashboard">
+              <button className="border border-[#2f2f2f] hover:border-[#444] bg-[#161616] text-[#ededed] hover:text-[#d4fc64] font-medium px-3 sm:px-4 py-1.5 rounded-full text-xs transition-all flex items-center gap-1.5">
+                <span>← <span className="hidden xs:inline">Dashboard</span><span className="xs:hidden">Back</span></span>
+              </button>
+            </Link>
+          </div>
         </div>
       </header>
 

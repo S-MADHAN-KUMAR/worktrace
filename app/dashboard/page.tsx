@@ -121,6 +121,13 @@ export default function DashboardPage() {
               Analytics
             </Link>
 
+            <Link
+              href="/dashboard/settings"
+              className="h-8 sm:h-9 px-3 sm:px-4 rounded-full border border-[#2f2f2f] bg-[#161616] hover:border-[#444] text-xs font-medium text-white hover:text-[#d4fc64] grid place-items-center transition-all"
+            >
+              Settings
+            </Link>
+
             {userName && (
               <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#262626] bg-[#111111] text-xs font-mono text-[#a3a3a3]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#d4fc64]" />

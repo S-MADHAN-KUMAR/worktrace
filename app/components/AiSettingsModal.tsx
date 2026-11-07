@@ -234,11 +234,6 @@ export default function AiSettingsModal({ isOpen, onClose, onSave }: AiSettingsM
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-white">{m.name}</span>
-                      {m.supportsVision && (
-                        <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-[#161616] text-[#d4fc64] border border-[#2a2a2a]">
-                          Vision
-                        </span>
-                      )}
                     </div>
                     <p className="text-[10px] text-[#737373] leading-snug line-clamp-1">{m.description}</p>
                   </button>

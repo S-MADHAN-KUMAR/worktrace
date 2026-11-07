@@ -304,6 +304,13 @@ export default function WhatsAppModal({
 
               {recipients.length > 0 && (
                 <div className="flex items-center gap-2 text-[11px] font-mono">
+                  <a
+                    href="/dashboard/settings"
+                    className="text-[#25D366] hover:underline flex items-center gap-1"
+                  >
+                    <span>⚙️ Manage in Settings</span>
+                  </a>
+                  <span className="text-[#333]">·</span>
                   <button
                     type="button"
                     onClick={() => handleSelectAll(true)}
@@ -402,8 +409,14 @@ export default function WhatsAppModal({
                 })}
               </div>
             ) : (
-              <div className="p-4 rounded-xl border border-dashed border-[#262626] text-center text-xs font-mono text-[#737373]">
-                No recipients added yet. Add your manager, lead, or teammates above to save them.
+              <div className="p-4 rounded-xl border border-dashed border-[#262626] text-center text-xs font-mono text-[#737373] space-y-2">
+                <p>No recipients added yet.</p>
+                <a
+                  href="/dashboard/settings"
+                  className="inline-block px-3 py-1.5 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-colors"
+                >
+                  ⚙️ Open Settings to Add Mobile Numbers
+                </a>
               </div>
             )}
           </div>

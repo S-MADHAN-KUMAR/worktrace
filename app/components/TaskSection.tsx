@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
+import Link from 'next/link'
 import AiSettingsModal from './AiSettingsModal'
 import AiEnhanceModal from './AiEnhanceModal'
 import WhatsAppModal from './WhatsAppModal'
-import { getStoredAiConfig, optimizeImageForAi } from '@/lib/ai'
+import { getStoredAiConfig } from '@/lib/ai'
 
 interface WorkUpdate {
   id: string
@@ -279,9 +280,15 @@ export default function TaskSection({
     ]
   }, [existingImages, images, imagePreviews])
 
-  // AI Enhancement Runner
+  // AI Enhancement Runner (Text only - screenshots reserved for WhatsApp dispatch)
   const handleEnhance = async (customInstruction?: string) => {
     if (!selectedDate) return
+
+    let contentToSend = description.trim()
+    if (!contentToSend) {
+      setSaveError('Please type your work notes or bullet points in the description box before clicking Enhance with AI.')
+      return
+    }
 
     setIsAiEnhanceOpen(true)
     setIsAiLoading(true)
@@ -290,32 +297,16 @@ export default function TaskSection({
     try {
       const config = getStoredAiConfig()
 
-      // Collect all image sources
-      const rawImageSources: Array<File | string> = [
-        ...images,
-        ...existingImages.map(img => img.image_url),
-      ]
-
-      // Downscale/compress images for fast multimodal transmission
-      const optimizedImages: string[] = []
-      for (const src of rawImageSources) {
-        const optimized = await optimizeImageForAi(src)
-        if (optimized) optimizedImages.push(optimized)
-      }
-
-      let contentToSend = description.trim()
       if (customInstruction?.trim()) {
-        contentToSend = contentToSend
-          ? `${contentToSend}\n\n[User Instruction: ${customInstruction.trim()}]`
-          : `[User Instruction: ${customInstruction.trim()}]`
+        contentToSend = `${contentToSend}\n\n[User Instruction: ${customInstruction.trim()}]`
       }
 
+      // Send text content only to OpenRouter
       const response = await fetch('/api/ai/enhance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: contentToSend,
-          images: optimizedImages,
           systemPrompt: config.systemPrompt,
           model: config.model,
           apiKey: config.apiKey,
@@ -487,23 +478,22 @@ export default function TaskSection({
               <button
                 type="button"
                 onClick={() => handleEnhance()}
-                disabled={isLeave || sickLeave || casualLeave || (!description.trim() && allScreenshots.length === 0)}
+                disabled={isLeave || sickLeave || casualLeave || !description.trim()}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#d4fc64]/50 bg-[#d4fc64]/10 hover:bg-[#d4fc64]/20 text-[#d4fc64] text-xs font-mono font-medium transition-all shadow-[0_0_12px_rgba(212,252,100,0.15)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                title="Enhance notes and screenshots into a structured work report via OpenRouter AI"
+                title="Enhance raw notes into a structured work report via OpenRouter AI"
               >
                 <span>✨</span>
                 <span>Enhance with AI</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setIsAiSettingsOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#262626] bg-[#141414] hover:bg-[#202020] text-[#a3a3a3] hover:text-[#ededed] text-xs font-mono transition-all"
-                title="Configure custom system prompt, model & OpenRouter API key"
+              <Link
+                href="/dashboard/settings"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-[#262626] bg-[#141414] hover:bg-[#202020] text-[#a3a3a3] hover:text-[#d4fc64] text-xs font-mono transition-all"
+                title="Configure WhatsApp mobile directory & AI settings"
               >
                 <span>⚙️</span>
-                <span className="hidden sm:inline">AI Prompt</span>
-              </button>
+                <span className="hidden sm:inline">Settings</span>
+              </Link>
 
               <button
                 type="button"

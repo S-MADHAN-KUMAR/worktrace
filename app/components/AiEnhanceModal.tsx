@@ -9,7 +9,7 @@ interface AiEnhanceModalProps {
   originalContent: string
   enhancedContent: string
   modelUsed: string
-  imageCount: number
+  imageCount?: number
   onClose: () => void
   onApply: (content: string) => void
   onAppend: (content: string) => void
@@ -81,20 +81,20 @@ export default function AiEnhanceModal({
                 )}
               </div>
               <p className="text-[11px] font-mono text-[#737373]">
-                {imageCount > 0 ? `${imageCount} screenshot(s) analyzed · ` : ''}Powered by OpenRouter
+                Text content enhanced via OpenRouter · Screenshots ready for WhatsApp
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenSettings}
+            <a
+              href="/dashboard/settings"
               className="p-1.5 rounded-lg border border-[#262626] bg-[#141414] hover:bg-[#202020] text-[#a3a3a3] hover:text-[#d4fc64] transition-colors text-xs font-mono flex items-center gap-1"
-              title="Configure AI Settings"
+              title="Open Workspace Settings"
             >
               <span>⚙️</span>
               <span className="hidden sm:inline">Settings</span>
-            </button>
+            </a>
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-full border border-[#262626] bg-[#141414] hover:bg-[#202020] text-[#a3a3a3] hover:text-white flex items-center justify-center transition-colors text-sm"
@@ -118,9 +118,7 @@ export default function AiEnhanceModal({
               <div>
                 <h3 className="text-sm font-medium text-white mb-1">Synthesizing Work Report...</h3>
                 <p className="text-xs font-mono text-[#737373] max-w-sm">
-                  {imageCount > 0
-                    ? `Inspecting ${imageCount} screenshot(s) and structuring technical highlights with OpenRouter...`
-                    : 'Transforming raw notes into an executive daily report with OpenRouter...'}
+                  Transforming raw notes into an executive daily report with OpenRouter AI...
                 </p>
               </div>
             </div>
@@ -134,13 +132,12 @@ export default function AiEnhanceModal({
               </div>
 
               <div className="flex items-center gap-3 justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="px-4 py-2 rounded-full border border-[#383838] bg-[#141414] hover:bg-[#222] text-xs font-mono text-white transition-all"
+                <a
+                  href="/dashboard/settings"
+                  className="px-4 py-2 rounded-full border border-[#383838] bg-[#141414] hover:bg-[#222] text-xs font-mono text-white transition-all flex items-center gap-1.5"
                 >
-                  Configure API Key in Settings ⚙️
-                </button>
+                  Configure in Settings Page ⚙️
+                </a>
                 <button
                   type="button"
                   onClick={() => onRegenerate()}
