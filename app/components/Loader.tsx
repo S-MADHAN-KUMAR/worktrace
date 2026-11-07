@@ -1,16 +1,21 @@
-const Loader = () => {
-  return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 border-4 border-[#1F1F1F] rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-t-[#CCFF00] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-        <div className="absolute inset-2 border-4 border-b-[#CCFF00] border-t-transparent border-r-transparent border-l-transparent rounded-full animate-spin-reverse opacity-50"></div>
-      </div>
-      <div className="font-mono text-[#CCFF00] text-sm animate-pulse">
-        SYSTEM_BOOT://LOADING_ASSETS...
-      </div>
-    </div>
-  );
-}
+'use client'
 
-export default Loader;
+import React from 'react'
+
+export default function Loader({ label = 'Initializing environment...' }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-5">
+      <div className="relative w-12 h-12">
+        {/* Soft lime glow backdrop */}
+        <div className="absolute inset-0 rounded-full bg-[#d4fc64]/20 filter blur-md animate-pulse"></div>
+        {/* Track */}
+        <div className="absolute inset-0 rounded-full border-[2.5px] border-[#242424]"></div>
+        {/* Active glowing spinner */}
+        <div className="absolute inset-0 rounded-full border-[2.5px] border-transparent border-t-[#d4fc64] border-r-[#f9fb04] animate-spin"></div>
+        {/* Inner dot */}
+        <div className="absolute inset-[18px] rounded-full bg-[#d4fc64] shadow-[0_0_10px_#d4fc64] animate-pulse"></div>
+      </div>
+      <p className="text-xs text-[#a3a3a3] font-mono tracking-wider">{label}</p>
+    </div>
+  )
+}

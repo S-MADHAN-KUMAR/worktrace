@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay, addMonths, subMonths } from 'date-fns'
+import { addMonths, eachDayOfInterval, endOfMonth, format, getDay, isSameDay, isToday, startOfMonth, subMonths } from 'date-fns'
 
 interface WorkUpdate {
   id: string
@@ -20,156 +20,105 @@ interface CalendarProps {
 
 export default function Calendar({ selectedDate, onDateSelect, workUpdates }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
-
   const monthStart = startOfMonth(currentMonth)
-  const monthEnd = endOfMonth(currentMonth)
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const days = eachDayOfInterval({ start: monthStart, end: endOfMonth(currentMonth) })
+  const emptyDays = Array(getDay(monthStart)).fill(null)
 
-  const firstDayOfWeek = getDay(monthStart)
-  const emptyDays = Array(firstDayOfWeek).fill(null)
-
-  const getWorkUpdateForDate = (date: Date): WorkUpdate | undefined => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    return workUpdates.find(update => {
-      const updateDateStr = update.date.split('T')[0]
-      return updateDateStr === dateStr
-    })
-  }
-
-  const isWorkingDay = (date: Date): boolean => {
-    const dayOfWeek = getDay(date)
-    return dayOfWeek !== 0 && dayOfWeek !== 6
-  }
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentMonth(prev => direction === 'next' ? addMonths(prev, 1) : subMonths(prev, 1))
-  }
-
-  const weekDays = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+  const updateForDay = (day: Date) => workUpdates.find(update =>
+    update.date.split('T')[0] === format(day, 'yyyy-MM-dd')
+  )
 
   return (
-    <div className="w-full">
-      {/* Month Navigation Header */}
-      <div className="flex items-center justify-between mb-4 px-2">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[#CCFF00] animate-pulse"></div>
-          <div className="flex flex-col">
-            <h2 className="text-xl font-bold font-tech text-white leading-none">
-              {format(currentMonth, 'MMMM').toUpperCase()}
-            </h2>
-            <p className="text-[#CCFF00] text-[10px] font-mono tracking-widest">
-              YEAR_{format(currentMonth, 'yyyy')}
-            </p>
-          </div>
+    <div className="select-none">
+      {/* Month Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#737373]">{format(currentMonth, 'yyyy')}</p>
+          <h2 className="text-xl font-medium tracking-tight text-white">{format(currentMonth, 'MMMM')}</h2>
         </div>
-
-        <div className="flex gap-px">
-          <button
-            onClick={() => navigateMonth('prev')}
-            className="w-8 h-8 flex items-center justify-center bg-[#111] border border-[#333] hover:border-[#CCFF00] hover:text-[#CCFF00] transition-colors"
+        <div className="flex gap-1.5">
+          <button 
+            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} 
+            className="h-8 w-8 rounded-full border border-[#262626] text-[#a3a3a3] hover:text-white hover:border-[#444] hover:bg-[#1a1a1a] transition-all grid place-items-center text-sm" 
+            aria-label="Previous month"
           >
-            &lt;
+            ‹
           </button>
-          <button
-            onClick={() => navigateMonth('next')}
-            className="w-8 h-8 flex items-center justify-center bg-[#111] border border-[#333] hover:border-[#CCFF00] hover:text-[#CCFF00] transition-colors"
+          <button 
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} 
+            className="h-8 w-8 rounded-full border border-[#262626] text-[#a3a3a3] hover:text-white hover:border-[#444] hover:bg-[#1a1a1a] transition-all grid place-items-center text-sm" 
+            aria-label="Next month"
           >
-            &gt;
+            ›
           </button>
         </div>
       </div>
 
-      {/* Days Grid */}
-      <div className="border border-[#1F1F1F] bg-[#1F1F1F] grid grid-cols-7 gap-px">
-        {weekDays.map(day => (
-          <div key={day} className="bg-[#0A0A0A] py-2 text-center text-[10px] font-mono font-bold text-gray-600 uppercase tracking-wider">
+      {/* Weekday Labels */}
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+          <div key={`${day}-${index}`} className="h-7 grid place-items-center text-[10px] sm:text-[11px] font-mono font-medium text-[#737373]">
             {day}
           </div>
         ))}
+      </div>
 
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
         {emptyDays.map((_, index) => (
-          <div key={`empty-${index}`} className="bg-[#050505] aspect-square" />
+          <div key={`empty-${index}`} className="aspect-square" />
         ))}
-
-        {daysInMonth.map(day => {
-          const workUpdate = getWorkUpdateForDate(day)
-          const isLeaveDay = workUpdate?.is_leave ?? false
-          const isSickLeaveDay = workUpdate?.sick_leave ?? false
-          const isCasualLeaveDay = workUpdate?.casual_leave ?? false
-          const hasTask = workUpdate && !isLeaveDay && !isSickLeaveDay && !isCasualLeaveDay && workUpdate.description
-          const isWeekend = !isWorkingDay(day)
-          const isSelected = selectedDate && isSameDay(day, selectedDate)
-          const isCurrentDay = isToday(day)
+        {days.map(day => {
+          const update = updateForDay(day)
+          const selected = selectedDate && isSameDay(day, selectedDate)
+          const today = isToday(day)
+          
+          let statusColor = null
+          if (update?.is_leave) statusColor = '#cb5f5f'
+          else if (update?.sick_leave) statusColor = '#ffea71'
+          else if (update?.casual_leave) statusColor = '#8cab87'
+          else if (update?.description?.trim()) statusColor = '#d4fc64'
 
           return (
             <button
               key={day.toISOString()}
               onClick={() => onDateSelect(day)}
-              className={`
-                relative bg-[#0A0A0A] aspect-square flex flex-col items-center justify-center
-                transition-all duration-200 group
-                ${isSelected ? 'bg-[#CCFF00] text-black' : 'text-gray-400 hover:bg-[#111]'}
-                ${isWeekend && !isSelected ? 'opacity-30' : ''}
-              `}
+              className={`relative aspect-square rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-mono transition-all duration-150 flex flex-col items-center justify-center ${
+                selected 
+                  ? 'bg-[#d4fc64] text-black font-semibold shadow-[0_0_18px_rgba(212,252,100,0.35)] scale-105 z-10' 
+                  : today 
+                    ? 'border border-[#d4fc64]/50 bg-[#d4fc64]/10 text-white font-medium hover:bg-[#d4fc64]/20' 
+                    : 'text-[#a3a3a3] hover:text-white hover:bg-[#1c1c1c] border border-transparent'
+              }`}
+              aria-label={format(day, 'MMMM d, yyyy')}
             >
-              {/* Corner accent for today */}
-              {isCurrentDay && !isSelected && (
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#CCFF00]"></div>
-              )}
-
-              <span className={`text-sm font-mono font-bold ${isSelected ? 'text-black' : ''}`}>
-                {format(day, 'd')}
-              </span>
-
-              {/* Status Indicators */}
-              <div className="absolute bottom-1 w-full flex justify-center gap-0.5 px-1">
-                {hasTask && (
-                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-blue-500'} `}></div>
-                )}
-                {isLeaveDay && (
-                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-red-500'} `}></div>
-                )}
-                {isSickLeaveDay && (
-                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-orange-500'} `}></div>
-                )}
-                {isCasualLeaveDay && (
-                  <div className={`h-[2px] w-[50%] ${isSelected ? 'bg-black' : 'bg-purple-500'} `}></div>
-                )}
-              </div>
-
-              {/* Selection Glitch Overlay */}
-              {isSelected && (
-                <div className="absolute inset-0 bg-[#CCFF00] mix-blend-overlay opacity-50"></div>
+              <span>{format(day, 'd')}</span>
+              {statusColor && !selected && (
+                <span 
+                  className="absolute bottom-1 sm:bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full shadow-sm" 
+                  style={{ backgroundColor: statusColor }} 
+                />
               )}
             </button>
           )
         })}
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 flex flex-wrap gap-4 text-[10px] font-mono uppercase text-gray-500">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-[#CCFF00]"></div>
-          <span>Selected</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-0.5 bg-blue-500"></div>
-          <span>Data_Logged</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-0.5 bg-red-500"></div>
-          <span>Leave</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-0.5 bg-orange-500"></div>
-          <span>Sick_Leave</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-0.5 bg-purple-500"></div>
-          <span>Casual_Leave</span>
-        </div>
+      {/* Status Legend in Modal Style */}
+      <div className="mt-6 pt-4 border-t border-[#1f1f1f] flex flex-wrap items-center gap-3.5 text-[11px] font-mono text-[#8b8b8b]">
+        <span className="flex items-center gap-1.5">
+          <i className="h-1.5 w-1.5 rounded-full bg-[#d4fc64] shadow-[0_0_6px_#d4fc64]" /> Active Entry
+        </span>
+        <span className="flex items-center gap-1.5">
+          <i className="h-1.5 w-1.5 rounded-full bg-[#cb5f5f]" /> Leave
+        </span>
+        <span className="flex items-center gap-1.5">
+          <i className="h-1.5 w-1.5 rounded-full bg-[#ffea71]" /> Sick
+        </span>
+        <span className="flex items-center gap-1.5">
+          <i className="h-1.5 w-1.5 rounded-full bg-[#8cab87]" /> Casual
+        </span>
       </div>
     </div>
   )
 }
-

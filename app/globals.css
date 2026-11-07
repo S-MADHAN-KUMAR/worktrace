@@ -1,328 +1,157 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-neon-lime: #CCFF00;
-  --color-void: #050505;
-  --color-void-panel: #0A0A0A;
-  --color-tech-border: #1F1F1F;
-  --color-tech-border-light: #333333;
-
-  --font-tech: "Rajdhani", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
-  --font-display: "Outfit", sans-serif;
+@theme {
+  --font-sans: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
-  --neon-lime: #CCFF00;
-  --neon-lime-dim: rgba(204, 255, 0, 0.1);
-  --neon-lime-glow: rgba(204, 255, 0, 0.5);
-
-  --void-black: #000000;
-  --void-dark: #050505;
-  --void-panel: #0A0A0A;
-
-  --tech-border: #1F1F1F;
-  --tech-border-light: #333333;
-
-  /* Force dark mode */
   color-scheme: dark;
+
+  /* Modal Core Palette */
+  --color-raw-green-65: #6ac355;
+  --color-raw-yellow-20: #5d5733;
+  --color-c-green-90: #75d95c;
+  --color-c-green-60: #569846;
+  --color-c-pale-green-60: #8cab87;
+  --color-c-pale-green-90: #bbe6ac;
+  --color-c-pale-green-100: #c8f9b6;
+  --color-dark-green: #07b976;
+  
+  --color-modal-lime: #d4fc64;
+  --color-modal-yellow: #f9fb04;
+  --color-modal-yellow-glow: #ffea71;
+  --color-modal-green-accent: #63cd93;
+
+  /* Surfaces & Edges */
+  --color-void: #000000;
+  --color-ground: #0a0a0a;
+  --color-surface-base: #111111;
+  --color-surface-card: #161616;
+  --color-surface-elevated: #1c1c1c;
+  --color-surface-secondary: #242424;
+  --color-edge-subtle: #242424;
+  --color-edge-secondary: #2f2f2f;
+  --color-edge-highlight: #3e3e3e;
+
+  /* Text & Foreground */
+  --color-foreground: #ffffff;
+  --color-foreground-emphasis: #f3f3f3;
+  --color-foreground-secondary: #a3a3a3;
+  --color-foreground-muted: #737373;
+  --color-foreground-subtle: #525252;
 }
 
-body {
-  background-color: var(--void-dark);
-  color: #ffffff;
-  font-family: 'Outfit', sans-serif;
-  overflow-x: hidden;
-  height: 100vh;
+html, body {
+  min-height: 100%;
+  background-color: #000000;
+  color: #ededed;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
 }
 
-/* =========================================
-   CYBERPUNK UTILITIES
-   ========================================= */
-
-/* 1. Angled / Cut Corners */
-.clip-corner-1 {
-  clip-path: polygon(0 0,
-      100% 0,
-      100% calc(100% - 20px),
-      calc(100% - 20px) 100%,
-      0 100%);
+button, input, textarea, select {
+  font: inherit;
 }
 
-.clip-corner-2 {
-  clip-path: polygon(20px 0,
-      100% 0,
-      100% 100%,
-      0 100%,
-      0 20px);
-}
-
-.clip-corner-4 {
-  clip-path: polygon(10px 0, 100% 0,
-      100% calc(100% - 10px), calc(100% - 10px) 100%,
-      0 100%, 0 10px);
-}
-
-/* 2. Panel Styles */
-.panel-base {
-  background: var(--void-panel);
-  border: 1px solid var(--tech-border);
-  position: relative;
-}
-
-.panel-glow:hover {
-  border-color: var(--tech-border-light);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-}
-
-/* 3. Grid Backgrounds */
-.bg-grid {
-  background-image:
-    linear-gradient(var(--tech-border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--tech-border) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: center top;
-}
-
-.bg-grid-faint {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* 4. Neon Accents */
-.text-neon {
-  color: var(--neon-lime);
-}
-
-.bg-neon {
-  background-color: var(--neon-lime);
-  color: black;
-}
-
-.border-neon {
-  border-color: var(--neon-lime);
-}
-
-.glow-neon {
-  box-shadow: 0 0 15px var(--neon-lime-glow);
-}
-
-/* 5. Buttons */
-.btn-cyber {
-  background: transparent;
-  border: 1px solid var(--neon-lime);
-  color: var(--neon-lime);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 0.75rem 1.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  transition: all 0.2s ease;
+button {
   cursor: pointer;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
 }
 
-.btn-cyber-red {
-  background: transparent;
-  border: 1px solid red;
-  color: red;
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 0.75rem 1.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+/* Modal Signature Lime Selection */
+::selection {
+  background: #d4fc64;
+  color: #000000;
 }
 
-.btn-cyber-red:hover {
-  background: red;
-  color: black;
-  box-shadow: 0 0 20px red;
-}
-
-.btn-cyber:hover {
-  background: var(--neon-lime);
-  color: black;
-  box-shadow: 0 0 20px var(--neon-lime-glow);
-}
-
-.btn-cyber-filled {
-  background: var(--neon-lime);
-  color: black;
-  border: 1px solid var(--neon-lime);
-  text-transform: uppercase;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 0.75rem 1.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
-}
-
-.btn-cyber-filled:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 0 20px var(--neon-lime-glow);
-  transform: translateY(-1px);
-}
-
-/* 6. Text Effects */
-.glitch-text {
-  position: relative;
-}
-
-.glitch-text:hover {
-  text-shadow: 2px 0 var(--neon-lime), -2px 0 #ff00ff;
-}
-
-/* 7. Scanline Overlay */
-.scanlines {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0) 50%,
-      rgba(0, 0, 0, 0.1) 50%,
-      rgba(0, 0, 0, 0.1));
-  background-size: 100% 4px;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.3;
-}
-
-.scanline-bar {
-  width: 100%;
-  height: 5px;
-  background: rgba(204, 255, 0, 0.1);
-  position: fixed;
-  z-index: 10000;
-  top: 0;
-  left: 0;
-  animation: scan 6s linear infinite;
-  pointer-events: none;
-  filter: blur(4px);
-}
-
-@keyframes scan {
-  0% {
-    top: -10%;
-  }
-
-  100% {
-    top: 110%;
-  }
-}
-
-/* Typography Helpers */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 800;
-}
-
-.font-mono {
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.font-tech {
-  font-family: 'Rajdhani', sans-serif;
-}
-
-/* Decorators */
-.crosshair {
-  position: relative;
-}
-
-.crosshair::before,
-.crosshair::after {
-  content: '';
-  position: absolute;
-  background: var(--neon-lime);
-}
-
-.crosshair-tl::before {
-  top: 0;
-  left: 0;
-  width: 10px;
-  height: 1px;
-}
-
-.crosshair-tl::after {
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 10px;
-}
-
-.crosshair-tr::before {
-  top: 0;
-  right: 0;
-  width: 10px;
-  height: 1px;
-}
-
-.crosshair-tr::after {
-  top: 0;
-  right: 0;
-  width: 1px;
-  height: 10px;
-}
-
-.crosshair-bl::before {
-  bottom: 0;
-  left: 0;
-  width: 10px;
-  height: 1px;
-}
-
-.crosshair-bl::after {
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  height: 10px;
-}
-
-.crosshair-br::before {
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 1px;
-}
-
-.crosshair-br::after {
-  bottom: 0;
-  right: 0;
-  width: 1px;
-  height: 10px;
-}
-
+/* Custom Modal Dark Scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--void-black);
+  background: #0a0a0a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--tech-border);
+  background: #262626;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-lime);
+  background: #383838;
+}
+
+/* Modal Subtle Tech Grid */
+.bg-modal-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.bg-modal-grid-dense {
+  background-size: 16px 16px;
+  background-image: 
+    linear-gradient(to right, rgba(212, 252, 100, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 252, 100, 0.04) 1px, transparent 1px);
+}
+
+/* Modal Glowing Cube & Light Effects */
+.modal-glow-radial {
+  background: radial-gradient(circle at 50% 50%, rgba(249, 251, 4, 0.35) 0%, rgba(212, 252, 100, 0.22) 30%, rgba(106, 195, 85, 0.08) 60%, transparent 80%);
+}
+
+.modal-glow-pill {
+  box-shadow: 0 0 25px -4px rgba(212, 252, 100, 0.4), 0 0 10px -2px rgba(249, 251, 4, 0.3);
+}
+
+.modal-glow-box {
+  box-shadow: 0 0 40px -10px rgba(212, 252, 100, 0.25);
+}
+
+/* Modal Animated Caustic Bleed */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-modal-pulse {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-modal-float {
+  animation: floatGentle 6s ease-in-out infinite;
+}
+
+/* Typography Gradient */
+.modal-headline-gradient {
+  background: linear-gradient(180deg, #ffffff 30%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.modal-accent-gradient {
+  background: linear-gradient(90deg, #f9fb04 0%, #d4fc64 60%, #c8f9b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

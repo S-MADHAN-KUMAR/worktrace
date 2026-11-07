@@ -3,262 +3,137 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ModalCube from '../components/ModalCube'
 
 export default function TimePage() {
-    const [time, setTime] = useState(new Date())
-    const router = useRouter()
+  const [time, setTime] = useState(new Date())
+  const router = useRouter()
 
-    useEffect(() => {
-        const authenticated = localStorage.getItem('authenticated')
-        if (!authenticated) {
-            router.push('/login')
-            return
-        }
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(response => response.json())
+      .then(data => {
+        if (!data.authenticated) router.push('/login')
+      })
+      .catch(() => router.push('/login'))
 
-        const timer = setInterval(() => {
-            setTime(new Date())
-        }, 1000)
+    const timer = setInterval(() => {
+      setTime(new Date())
+    }, 1000)
 
-        return () => clearInterval(timer)
-    }, [router])
+    return () => clearInterval(timer)
+  }, [router])
 
-    const rawHours = time.getHours()
-    const hours = (rawHours % 12 || 12).toString().padStart(2, '0')
-    const minutes = time.getMinutes().toString().padStart(2, '0')
-    const seconds = time.getSeconds().toString().padStart(2, '0')
-    const period = rawHours >= 12 ? 'PM' : 'AM'
-    const date = time.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    })
+  const rawHours = time.getHours()
+  const hours = (rawHours % 12 || 12).toString().padStart(2, '0')
+  const minutes = time.getMinutes().toString().padStart(2, '0')
+  const seconds = time.getSeconds().toString().padStart(2, '0')
+  const period = rawHours >= 12 ? 'PM' : 'AM'
+  const dateStr = time.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 
-    return (
-        <div className="min-h-screen bg-[#000000] text-white font-sans selection:bg-[#CCFF00] selection:text-black flex flex-col relative overflow-hidden">
-            
-            {/* Animated Background Grid */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(204,255,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(204,255,0,0.03)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none animate-pulse"></div>
-            
-            {/* Glitch Lines */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute w-full h-[2px] bg-[#CCFF00] opacity-20 animate-scan" style={{ top: '20%' }}></div>
-                <div className="absolute w-full h-[1px] bg-[#CCFF00] opacity-10 animate-scan-slow" style={{ top: '60%' }}></div>
-                <div className="absolute w-full h-[2px] bg-[#CCFF00] opacity-15 animate-scan-reverse" style={{ top: '80%' }}></div>
-            </div>
+  return (
+    <div className="min-h-screen bg-black text-[#ededed] font-sans selection:bg-[#d4fc64] selection:text-black flex flex-col justify-between relative overflow-hidden">
+      {/* Background Tech Grid */}
+      <div className="absolute inset-0 bg-modal-grid opacity-25 pointer-events-none" />
 
-            {/* Floating Particles */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {[...Array(20)].map((_, i) => (
-                    <div
-                        key={i}
-                        className="absolute w-1 h-1 bg-[#CCFF00] rounded-full opacity-30 animate-float"
-                        style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            animationDelay: `${Math.random() * 5}s`,
-                            animationDuration: `${5 + Math.random() * 10}s`
-                        }}
-                    />
-                ))}
-            </div>
+      {/* Ambient background glow */}
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none filter blur-[120px] opacity-25"
+        style={{
+          background: 'radial-gradient(circle, rgba(212,252,100,0.5) 0%, rgba(106,195,85,0.2) 40%, transparent 75%)',
+        }}
+      />
 
-            {/* Corner Brackets */}
-            <div className="absolute top-8 left-8 w-20 h-20 border-l-2 border-t-2 border-[#CCFF00] opacity-30"></div>
-            <div className="absolute top-8 right-8 w-20 h-20 border-r-2 border-t-2 border-[#CCFF00] opacity-30"></div>
-            <div className="absolute bottom-8 left-8 w-20 h-20 border-l-2 border-b-2 border-[#CCFF00] opacity-30"></div>
-            <div className="absolute bottom-8 right-8 w-20 h-20 border-r-2 border-b-2 border-[#CCFF00] opacity-30"></div>
-
-            {/* Header */}
-            <header className="bg-[#000000]/90 border-b border-[#CCFF00]/20 px-6 py-4 sticky top-0 z-50 backdrop-blur-md">
-                <Link href="/dashboard" className="inline-block">
-                    <button className="btn-cyber-red font-mono text-xs flex items-center gap-2">
-                        <span>← RETURN</span>
-                    </button>
-                </Link>
-            </header>
-
-            {/* Main Time Display */}
-            <main className="flex-1 flex flex-col items-center justify-center relative z-10 px-4">
-                
-                {/* System Label */}
-                <div className="mb-8 flex items-center gap-3 animate-pulse">
-                    <div className="w-3 h-3 bg-[#CCFF00] rounded-full shadow-[0_0_20px_#CCFF00]"></div>
-                    <span className="font-mono text-[#CCFF00] text-sm tracking-[0.3em] uppercase">
-                        CHRONO_SYNC_ACTIVE
-                    </span>
-                    <div className="w-3 h-3 bg-[#CCFF00] rounded-full shadow-[0_0_20px_#CCFF00]"></div>
-                </div>
-
-                {/* Time Display */}
-                <div className="relative">
-                    {/* Glow Effect */}
-                    <div className="absolute inset-0 blur-3xl bg-[#CCFF00] opacity-20 animate-pulse"></div>
-                    
-                    {/* Main Time */}
-                    <div className="relative flex items-center gap-4 md:gap-8">
-                        <div className="time-digit-group">
-                            <span className="time-digit">{hours[0]}</span>
-                            <span className="time-digit">{hours[1]}</span>
-                        </div>
-                        <span className="time-separator">:</span>
-                        <div className="time-digit-group">
-                            <span className="time-digit">{minutes[0]}</span>
-                            <span className="time-digit">{minutes[1]}</span>
-                        </div>
-                        <span className="time-separator">:</span>
-                        <div className="time-digit-group">
-                            <span className="time-digit opacity-70">{seconds[0]}</span>
-                            <span className="time-digit opacity-70">{seconds[1]}</span>
-                        </div>
-                        <span className="time-period">{period}</span>
-                    </div>
-                </div>
-
-                {/* Date Display */}
-                <div className="mt-12 font-mono text-[#CCFF00] text-xl md:text-3xl tracking-[0.2em] uppercase opacity-60 text-center">
-                    {date}
-                </div>
-
-                {/* Status Indicators */}
-                <div className="mt-16 flex gap-8 font-mono text-xs text-gray-600">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#CCFF00] rounded-full animate-pulse"></div>
-                        <span>UTC+05:30</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#CCFF00] rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                        <span>12H_FORMAT</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#CCFF00] rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                        <span>MILLISYNC_ENABLED</span>
-                    </div>
-                </div>
-
-            </main>
-
-            <style jsx>{`
-                .time-digit-group {
-                    display: flex;
-                    gap: 0.5rem;
-                }
-
-                .time-digit {
-                    font-size: clamp(6rem, 20vw, 18rem);
-                    font-weight: 900;
-                    font-family: 'Courier New', monospace;
-                    color: #CCFF00;
-                    text-shadow: 
-                        0 0 10px rgba(204, 255, 0, 0.8),
-                        0 0 20px rgba(204, 255, 0, 0.6),
-                        0 0 40px rgba(204, 255, 0, 0.4),
-                        0 0 80px rgba(204, 255, 0, 0.2);
-                    line-height: 1;
-                    position: relative;
-                }
-
-                .time-digit::before {
-                    content: attr(data-text);
-                    position: absolute;
-                    left: 2px;
-                    text-shadow: -2px 0 #ff00ff;
-                    top: 0;
-                    color: #CCFF00;
-                    overflow: hidden;
-                    animation: glitch 3s infinite;
-                }
-
-                .time-separator {
-                    font-size: clamp(6rem, 20vw, 18rem);
-                    font-weight: 900;
-                    font-family: 'Courier New', monospace;
-                    color: #CCFF00;
-                    text-shadow: 
-                        0 0 10px rgba(204, 255, 0, 0.8),
-                        0 0 20px rgba(204, 255, 0, 0.6);
-                    line-height: 1;
-                }
-
-                .time-period {
-                    font-size: clamp(3rem, 8vw, 6rem);
-                    font-weight: 900;
-                    font-family: 'Courier New', monospace;
-                    color: #CCFF00;
-                    text-shadow: 
-                        0 0 10px rgba(204, 255, 0, 0.8),
-                        0 0 20px rgba(204, 255, 0, 0.6);
-                    line-height: 1;
-                    margin-left: 1rem;
-                    opacity: 0.8;
-                }
-
-                @keyframes glitch {
-                    0%, 90%, 100% {
-                        opacity: 0;
-                    }
-                    91%, 94% {
-                        opacity: 0.3;
-                        transform: translateX(2px);
-                    }
-                    92%, 96% {
-                        opacity: 0.2;
-                        transform: translateX(-2px);
-                    }
-                }
-
-                @keyframes scan {
-                    0% {
-                        transform: translateY(-100vh);
-                    }
-                    100% {
-                        transform: translateY(100vh);
-                    }
-                }
-
-                @keyframes scan-slow {
-                    0% {
-                        transform: translateY(-100vh);
-                    }
-                    100% {
-                        transform: translateY(100vh);
-                    }
-                }
-
-                @keyframes scan-reverse {
-                    0% {
-                        transform: translateY(100vh);
-                    }
-                    100% {
-                        transform: translateY(-100vh);
-                    }
-                }
-
-                @keyframes float {
-                    0%, 100% {
-                        transform: translate(0, 0);
-                    }
-                    50% {
-                        transform: translate(20px, -20px);
-                    }
-                }
-
-                .animate-scan {
-                    animation: scan 8s linear infinite;
-                }
-
-                .animate-scan-slow {
-                    animation: scan-slow 12s linear infinite;
-                }
-
-                .animate-scan-reverse {
-                    animation: scan-reverse 10s linear infinite;
-                }
-
-                .animate-float {
-                    animation: float 8s ease-in-out infinite;
-                }
-            `}</style>
+      {/* Top Header */}
+      <header className="relative z-30 w-full max-w-[1440px] mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#d4fc64] rotate-45 transform" />
+            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#6ac355] rotate-45 transform" />
+          </div>
+          <span className="font-semibold tracking-tight text-base sm:text-lg text-white">Worktrace</span>
+          <span className="text-xs font-mono text-[#737373] ml-2 hidden sm:inline-block">/ Chrono Specimen</span>
         </div>
-    )
+
+        <Link href="/dashboard">
+          <button className="border border-[#2f2f2f] hover:border-[#4f4f4f] bg-[#111111]/80 hover:bg-[#1c1c1c] text-[#ededed] hover:text-[#d4fc64] font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all text-xs flex items-center gap-1.5 sm:gap-2">
+            <span>← <span className="hidden xs:inline">Return to </span>Dashboard</span>
+          </button>
+        </Link>
+      </header>
+
+      {/* Main Specimen Display */}
+      <main className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 py-6 sm:py-8 max-w-5xl mx-auto w-full text-center">
+        {/* Status chip */}
+        <div className="mb-5 sm:mb-6 inline-flex items-center gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-[#242424] bg-[#111111]/80 backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-[#d4fc64] shadow-[0_0_8px_#d4fc64] animate-pulse" />
+          <span className="text-[11px] sm:text-xs font-mono text-[#a3a3a3] uppercase tracking-wider">
+            Atomic Time Sync Active
+          </span>
+        </div>
+
+        {/* Time Digits Display */}
+        <div className="flex items-baseline justify-center gap-1 sm:gap-3 md:gap-5 font-mono select-none flex-nowrap">
+          <span className="text-4xl sm:text-7xl md:text-8xl lg:text-9xl font-semibold tracking-tighter text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.15)]">
+            {hours}
+          </span>
+          <span className="text-3xl sm:text-6xl md:text-7xl lg:text-8xl font-light text-[#d4fc64] animate-pulse">
+            :
+          </span>
+          <span className="text-4xl sm:text-7xl md:text-8xl lg:text-9xl font-semibold tracking-tighter text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.15)]">
+            {minutes}
+          </span>
+          <span className="text-3xl sm:text-6xl md:text-7xl lg:text-8xl font-light text-[#d4fc64] animate-pulse">
+            :
+          </span>
+          <span className="text-4xl sm:text-7xl md:text-8xl lg:text-9xl font-semibold tracking-tighter text-[#d4fc64] drop-shadow-[0_0_30px_rgba(212,252,100,0.3)]">
+            {seconds}
+          </span>
+          <span className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-medium text-[#737373] ml-1 sm:ml-2">
+            {period}
+          </span>
+        </div>
+
+        {/* Formatted Date */}
+        <div className="mt-4 sm:mt-6 text-sm sm:text-lg md:text-xl font-mono text-[#a3a3a3] tracking-wide sm:tracking-wider px-2">
+          {dateStr}
+        </div>
+
+        {/* Central Modal Glowing Cube Visual */}
+        <div className="mt-6 sm:mt-8">
+          <ModalCube size="md" interactive={false} />
+        </div>
+
+        {/* Specimen Telemetry Cards */}
+        <div className="mt-8 sm:mt-10 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 max-w-2xl w-full">
+          <div className="p-3 rounded-xl border border-[#242424] bg-[#111111]/60">
+            <p className="text-[10px] font-mono uppercase text-[#737373]">Zone</p>
+            <p className="text-xs font-mono text-white mt-1">UTC +05:30</p>
+          </div>
+          <div className="p-3 rounded-xl border border-[#242424] bg-[#111111]/60">
+            <p className="text-[10px] font-mono uppercase text-[#737373]">Standard</p>
+            <p className="text-xs font-mono text-white mt-1">ISO-8601</p>
+          </div>
+          <div className="p-3 rounded-xl border border-[#242424] bg-[#111111]/60">
+            <p className="text-[10px] font-mono uppercase text-[#737373]">Latency</p>
+            <p className="text-xs font-mono text-[#d4fc64] mt-1">&lt; 1 ms</p>
+          </div>
+          <div className="p-3 rounded-xl border border-[#242424] bg-[#111111]/60">
+            <p className="text-[10px] font-mono uppercase text-[#737373]">Precision</p>
+            <p className="text-xs font-mono text-white mt-1">Millisecond</p>
+          </div>
+        </div>
+      </main>
+
+      {/* Bottom Footer Bar */}
+      <footer className="relative z-20 w-full border-t border-[#1c1c1c] py-4 px-4 sm:px-6 text-center text-xs font-mono text-[#525252]">
+        Worktrace Time Infrastructure · Built with precision
+      </footer>
+    </div>
+  )
 }

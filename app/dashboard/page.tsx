@@ -1,232 +1,198 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-// import { useTheme } from '../components/ThemeProvider' // Theme logic is bypassed for forced dark mode
 import Link from 'next/link'
 import Calendar from '../components/Calendar'
 import TaskSection from '../components/TaskSection'
 import Loader from '../components/Loader'
-import { supabase } from '@/lib/supabase'
-
-export const dynamic = 'force-dynamic'
 
 interface WorkUpdate {
   id: string
   date: string
   description: string | null
   is_leave: boolean
+  sick_leave?: boolean
+  casual_leave?: boolean
 }
 
-
-
-
+export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [workUpdates, setWorkUpdates] = useState<WorkUpdate[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
-  // const { theme, toggleTheme } = useTheme() // Disabled for Cyberpunk Mode
-const [time, setTime] = useState(new Date());
-
-useEffect(() => {
-  const id = setInterval(() => setTime(new Date()), 1000);
-  return () => clearInterval(id);
-}, []);
-
-  useEffect(() => {
-    const authenticated = localStorage.getItem('authenticated')
-    if (!authenticated) {
-      router.push('/login')
-      return
-    }
-    loadWorkUpdates()
-  }, [router])
+  const [userName, setUserName] = useState<string>('')
+  const [now, setNow] = useState(new Date())
 
   const loadWorkUpdates = async () => {
     try {
       setIsLoading(true)
-      const { data, error } = await supabase
-        .from('work_updates')
-        .select('*')
-        .order('date', { ascending: false })
-
-      if (error) throw error
-      setWorkUpdates(data || [])
-    } catch (error) {
-      console.error('Error loading work updates:', error)
+      const response = await fetch('/api/entries', { cache: 'no-store' })
+      if (response.status === 401) {
+        router.push('/login')
+        return
+      }
+      if (!response.ok) throw new Error('Failed to load entries')
+      setWorkUpdates(await response.json())
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date)
-  }
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then(response => response.json())
+      .then(data => {
+        if (!data.authenticated) router.push('/login')
+        else {
+          if (data.user) setUserName(data.user)
+          loadWorkUpdates()
+        }
+      })
+      .catch(() => router.push('/login'))
 
-  const handleUpdate = () => {
-    loadWorkUpdates()
-  }
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem('authenticated')
+  const monthEntries = useMemo(() => {
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    return workUpdates.filter(update => {
+      const date = new Date(update.date)
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear
+    })
+  }, [workUpdates, now])
+
+  const activeDays = monthEntries.filter(update => update.description?.trim() || (!update.is_leave && !update.sick_leave && !update.casual_leave)).length
+  const leaveDays = monthEntries.filter(update => update.is_leave || update.sick_leave || update.casual_leave).length
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
   }
 
   if (isLoading) {
     return (
-      <div className="bg-[#050505] min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-20"></div>
-        <div className="w-16 h-16 border-4 border-t-[#CCFF00] border-r-[#CCFF00] border-b-transparent border-l-transparent rounded-full animate-spin mb-4"></div>
-        <div className="text-[#CCFF00] font-mono text-sm tracking-widest uppercase animate-pulse">Initializing System...</div>
-      </div>
+      <main className="min-h-screen bg-black flex items-center justify-center text-[#ededed]">
+        <Loader label="Loading workspace records..." />
+      </main>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#CCFF00] selection:text-black flex flex-col relative overflow-hidden">
+    <main className="min-h-screen bg-black text-[#ededed] font-sans relative selection:bg-[#d4fc64] selection:text-black">
+      {/* Background Tech Grid */}
+      <div className="absolute inset-0 bg-modal-grid opacity-20 pointer-events-none" />
 
-      {/* Top HUD Bar */}
-      <header className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-sm border-b border-[#1F1F1F]">
-        <div className="max-w-[1920px] mx-auto px-6 h-20 flex items-center justify-between relative">
-
-          {/* Decorative Top Marker */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-[2px] bg-gradient-to-r from-transparent via-[#CCFF00] to-transparent opacity-50"></div>
-
-          <div className="flex items-center gap-6">
-            {/* Logo / Title Block */}
-            <div className="flex items-center gap-4 group cursor-pointer">
-              <img src="/logo.png" alt="WT Logo" className="w-16 h-16 object-contain" />
-              <div className="flex flex-col">
-                <h1 className="font-mono glitch-text text-2xl font-black tracking-tighter leading-none" data-text="WORKTRACE ">
-                  WORKTRACE
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="w-2 h-2 bg-[#CCFF00] rounded-full animate-pulse"></span>
-                  <span className="text-[10px] font-mono text-gray-500 tracking-[0.2em]">SYSTEM ONLINE v2.0</span>
-                </div>
-              </div>
+      {/* Modal Style Sticky Header */}
+      <header className="h-16 sm:h-18 border-b border-[#1f1f1f] bg-black/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-[1440px] mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded-[3px] bg-[#d4fc64] rotate-45 transform" />
+              <span className="w-3.5 h-3.5 rounded-[3px] bg-[#6ac355] rotate-45 transform" />
             </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            {/* Clock / Status (Static visual for now) */}
-            <Link href="/time">
-              <div className="hidden md:flex flex-col items-end mr-6 border-r border-[#1F1F1F] pr-6 cursor-pointer group hover:scale-105 transition-transform">
-                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest group-hover:text-[#CCFF00]">Time :</span>
-                <span className="text-neon font-mono group-hover:text-[#CCFF00]">
-                  {time.toLocaleTimeString()}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold tracking-tight text-white text-sm sm:text-base">Worktrace</span>
+                <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border border-[#2e2e2e] bg-[#141414] text-[#a3a3a3]">
+                  v0.1
                 </span>
               </div>
-            </Link>
-
-            <div className="h-full flex items-center gap-2">
-              <Link href="/dashboard/stats">
-                <button className="btn-cyber font-mono text-xs flex items-center gap-2 mr-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span>Statistics</span>
-                </button>
-              </Link>
-
-
-              <button 
-              onClick={handleLogout}
-              className="btn-cyber-red font-mono text-xs flex items-center gap-2 mr-2">
-
-                <span>Exit</span>
-              </button>
             </div>
           </div>
+
+          <nav className="flex items-center gap-2 sm:gap-2.5">
+            <Link
+              href="/time"
+              className="hidden sm:flex h-9 items-center gap-2 px-3.5 rounded-full border border-[#262626] bg-[#111111] text-xs font-mono text-[#a3a3a3] hover:text-[#d4fc64] hover:border-[#3a3a3a] transition-all"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4fc64] animate-pulse" />
+              <span>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </Link>
+
+            <Link
+              href="/dashboard/stats"
+              className="h-8 sm:h-9 px-3 sm:px-4 rounded-full border border-[#2f2f2f] bg-[#161616] hover:border-[#444] text-xs font-medium text-white hover:text-[#d4fc64] grid place-items-center transition-all"
+            >
+              Analytics
+            </Link>
+
+            {userName && (
+              <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#262626] bg-[#111111] text-xs font-mono text-[#a3a3a3]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#d4fc64]" />
+                {userName}
+              </span>
+            )}
+
+            <button
+              onClick={logout}
+              className="h-8 sm:h-9 w-8 sm:w-9 rounded-full border border-[#262626] bg-[#111111] text-[#a3a3a3] hover:text-[#cb5f5f] hover:border-[#cb5f5f]/50 grid place-items-center transition-all text-xs"
+              aria-label="Log out"
+              title="Log out"
+            >
+              ↗
+            </button>
+          </nav>
         </div>
       </header>
 
-      {/* Main Interface */}
-      <main className="flex-1 max-w-[1920px] mx-auto w-full px-6 py-8 relative z-10">
-
-        {/* Background Decorative Lines */}
-        <div className="absolute top-0 left-8 bottom-0 w-[1px] bg-[#1F1F1F] pointer-events-none"></div>
-        <div className="absolute top-0 right-8 bottom-0 w-[1px] bg-[#1F1F1F] pointer-events-none"></div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-20">
-
-          {/* Left Panel: Calendar & Stats */}
-          <div className="lg:col-span-4 flex flex-col gap-8">
-            <div className="panel-base p-1 clip-corner-2 panel-glow">
-              {/* Corner Markers */}
-              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#CCFF00]"></div>
-              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#CCFF00]"></div>
-
-              <div className="bg-[#080808] p-6 relative overflow-hidden">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-mono text-[#CCFF00] uppercase tracking-[0.2em] flex items-center gap-2">
-                    <span className="w-1 h-4 bg-[#CCFF00]"></span>
-                    Chronological_Grid
-                  </h3>
-                  <div className="text-[10px] font-mono text-gray-600">MOD_CAL_01</div>
-                </div>
-
-                <Calendar
-                  selectedDate={selectedDate}
-                  onDateSelect={handleDateSelect}
-                  workUpdates={workUpdates}
-                />
-              </div>
+      {/* Main Container */}
+      <div className="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-6 py-5 sm:py-8">
+        {/* Top Greeting & Metric Summary */}
+        <section className="mb-6 sm:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-5 sm:gap-6 pb-5 sm:pb-6 border-b border-[#1c1c1c]">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+              <span className="text-xs font-mono text-[#737373]">
+                {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </span>
             </div>
-
-            {/* Stats / Info Panel */}
-            {/* <div className="panel-base p-6 clip-corner-1 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-grid opacity-10"></div>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 bg-[#1F1F1F] flex items-center justify-center border border-[#333]">
-                  <span className="text-[#CCFF00] font-tech text-xl">OT</span>
-                </div>
-                <div>
-                  <div className="text-[10px] font-mono text-gray-500 uppercase">Operational_Target</div>
-                  <div className="text-xl font-bold text-white tracking-widest">OTC TRADING</div>
-                </div>
-              </div>
-              <div className="h-[1px] w-full bg-[#1F1F1F] mb-4"></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-[9px] font-mono text-gray-500 uppercase mb-1">Total_Entries</div>
-                  <div className="text-lg font-mono text-[#CCFF00]">{workUpdates.length}</div>
-                </div>
-                <div>
-                  <div className="text-[9px] font-mono text-gray-500 uppercase mb-1">System_load</div>
-                  <div className="text-lg font-mono text-blue-400">42%</div>
-                </div>
-              </div>
-            </div> */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight text-white">
+              Good {now.getHours() < 12 ? 'morning' : now.getHours() < 18 ? 'afternoon' : 'evening'}{userName ? `, ${userName}` : ''}.
+            </h1>
           </div>
 
-          {/* Right Panel: Task Terminal */}
-          <div className="lg:col-span-8 h-full min-h-[500px]">
-            <div className="panel-base h-full relative clip-corner-1">
-              {/* Decorative Tech Header on Panel */}
-              <div className="h-8 bg-[#0F0F0F] border-b border-[#1F1F1F] flex items-center justify-between px-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                </div>
-                <div className="text-[10px] font-mono text-gray-600 uppercase">Input_Terminal_v4.exe</div>
+          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex-1 sm:min-w-[130px] rounded-xl sm:rounded-2xl border border-[#242424] bg-[#111111] p-3.5 sm:px-5 sm:py-3.5 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-mono text-[#737373] mb-1">
+                <span>Active Days</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#d4fc64] shadow-[0_0_8px_#d4fc64]" />
               </div>
+              <p className="text-xl sm:text-2xl font-medium text-white tracking-tight">{activeDays}</p>
+            </div>
 
-              <div className="p-1 h-[calc(100%-2rem)]">
-                <TaskSection
-                  selectedDate={selectedDate}
-                  workUpdates={workUpdates}
-                  onUpdate={handleUpdate}
-                />
+            <div className="flex-1 sm:min-w-[130px] rounded-xl sm:rounded-2xl border border-[#242424] bg-[#111111] p-3.5 sm:px-5 sm:py-3.5 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-mono text-[#737373] mb-1">
+                <span>Time Away</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#cb5f5f]" />
               </div>
+              <p className="text-xl sm:text-2xl font-medium text-[#cb5f5f] tracking-tight">{leaveDays}</p>
             </div>
           </div>
+        </section>
 
-        </div>
-      </main>
-    </div>
+        {/* 2-Column Dashboard Grid */}
+        <section className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] gap-5 sm:gap-6 items-stretch">
+          <aside className="rounded-2xl border border-[#242424] bg-[#111111] p-4 sm:p-6 shadow-xl">
+            <Calendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              workUpdates={workUpdates}
+            />
+          </aside>
+
+          <section className="min-h-[500px] sm:min-h-[640px] rounded-2xl border border-[#242424] bg-[#111111] shadow-xl overflow-hidden flex flex-col">
+            <TaskSection
+              selectedDate={selectedDate}
+              workUpdates={workUpdates}
+              onUpdate={loadWorkUpdates}
+            />
+          </section>
+        </section>
+      </div>
+    </main>
   )
 }

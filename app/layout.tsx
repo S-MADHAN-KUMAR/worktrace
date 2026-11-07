@@ -1,32 +1,25 @@
 import type { Metadata } from "next";
-import { Outfit, JetBrains_Mono, Rajdhani } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  display: 'swap',
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
   subsets: ["latin"],
-  display: 'swap',
-});
-
-const rajdhani = Rajdhani({
-  variable: "--font-rajdhani",
-  weight: ['500', '600', '700'],
-  subsets: ["latin"],
-  display: 'swap',
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "WORKTRACE ",
-  description: "Advanced Operational Dashboard",
+  title: "Worktrace — Operational Workspace Infrastructure",
+  description: "High-precision daily workspace tracking, logs, and developer operational analytics.",
   icons: {
-    icon: '/logo.png',
+    icon: "/favicon.ico",
   },
 };
 
@@ -36,14 +29,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" className="dark bg-black">
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} ${rajdhani.variable} antialiased bg-[#050505] text-white`}
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-black text-[#ededed] min-h-screen selection:bg-[#d4fc64] selection:text-black overflow-x-hidden`}
       >
-        <div className="fixed inset-0 bg-grid opacity-20 pointer-events-none z-0"></div>
-        <div className="scanlines"></div>
-        <div className="scanline-bar"></div>
-
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
